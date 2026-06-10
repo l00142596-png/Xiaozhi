@@ -1,0 +1,4 @@
+paho-mqtt>=2.0
+opuslib>=3.0
+pycryptodome>=3.20
+requests>=2.31
