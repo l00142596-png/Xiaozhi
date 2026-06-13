@@ -1,6 +1,6 @@
-# 2026-06-13 Current Results Backup
+# 2026-06-13/14 Current Results Backup
 
-This backup preserves the current Xiaozhi work before further ESP32 UI/audio/battery changes.
+This backup preserves the current Xiaozhi work before and after ESP32 UI/audio/battery changes.
 
 ## xiaozhi-esp32
 
@@ -13,10 +13,19 @@ Current major work included in the patch:
 - MQTT endpoint restored to config-driven behavior.
 - M5Stack Tab5 INA226 battery driver and battery charge/discharge logic work.
 - Incoming audio state gate removed earlier.
-- WIP touch-to-interrupt playback and local playback queue clearing.
-- WIP multiline subtitle layout adjustments present in display files.
+- Local playback queue is cleared immediately when aborting speech.
+- Residual incoming TTS audio is dropped after abort until next TTS start.
+- Tab5 short touch tap stops playback while speaking and stops listening while listening.
+- Multiline subtitle mode enabled for Tab5 and current sdkconfig; bottom subtitle card wraps text, caps height, and uses tighter line spacing.
+- Display clears stale battery icon when the board reports no valid battery, avoiding the no-battery 70% ghost icon.
 
-Note: `build_tab5/` is intentionally not backed up because it is generated build output.
+Build and flash status:
+
+- Build succeeded with ESP-IDF 5.5.2 for ESP32-P4.
+- `build/xiaozhi.bin` generated successfully.
+- Flash to COM7 succeeded on 2026-06-14.
+
+Note: `build/` and `build_tab5/` are intentionally not backed up because they are generated build output.
 
 ## xiaozhi-mcp-bridge / KB MCP
 

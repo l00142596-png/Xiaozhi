@@ -191,8 +191,30 @@ index cb635d4..dd7315d 100644
      TaskHandle_t activation_task_handle_ = nullptr;
  
  
+diff --git a/main/boards/m5stack-tab5/config.json b/main/boards/m5stack-tab5/config.json
+index 2f915f8..6d59a00 100644
+--- a/main/boards/m5stack-tab5/config.json
++++ b/main/boards/m5stack-tab5/config.json
+@@ -13,6 +13,7 @@
+                 "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D1_4BIT_BUS_SLOT_1=10",
+                 "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D2_4BIT_BUS_SLOT_1=9",
+                 "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D3_4BIT_BUS_SLOT_1=8",
++                "CONFIG_USE_MULTILINE_CHAT_MESSAGE=y",
+                 "CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y",
+                 "CONFIG_ESP32P4_REV_MIN_100=y"
+             ]
+@@ -28,7 +29,8 @@
+                 "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D0_SLOT_1=11",
+                 "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D1_4BIT_BUS_SLOT_1=10",
+                 "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D2_4BIT_BUS_SLOT_1=9",
+-                "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D3_4BIT_BUS_SLOT_1=8"
++                "CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D3_4BIT_BUS_SLOT_1=8",
++                "CONFIG_USE_MULTILINE_CHAT_MESSAGE=y"
+             ]
+         }
+     ]
 diff --git a/main/boards/m5stack-tab5/m5stack_tab5.cc b/main/boards/m5stack-tab5/m5stack_tab5.cc
-index 43ed5b5..882715c 100644
+index 43ed5b5..a933bfe 100644
 --- a/main/boards/m5stack-tab5/m5stack_tab5.cc
 +++ b/main/boards/m5stack-tab5/m5stack_tab5.cc
 @@ -10,6 +10,7 @@
@@ -228,7 +250,7 @@ index 43ed5b5..882715c 100644
  
      void InitializeI2c() {
          i2c_master_bus_config_t i2c_bus_cfg = {
-@@ -157,6 +165,75 @@ private:
+@@ -157,6 +165,76 @@ private:
          });
      }
  
@@ -252,7 +274,8 @@ index 43ed5b5..882715c 100644
 +        ESP_LOGI(TAG, "Touch tap at (%u, %u), state=%d", x, y, (int)state);
 +
 +        if (state == kDeviceStateSpeaking) {
-+            app.Schedule([&app]() {
++            app.Schedule([]() {
++                auto& app = Application::GetInstance();
 +                app.AbortSpeaking(kAbortReasonNone);
 +                Board::GetInstance().GetDisplay()->ShowNotification("已停止播放", 1000);
 +            });
@@ -304,7 +327,7 @@ index 43ed5b5..882715c 100644
      void InitializeGt911TouchPad() {
          ESP_LOGI(TAG, "Init GT911");
   
-@@ -480,7 +557,9 @@ public:
+@@ -480,7 +558,9 @@ public:
          InitializeI2c();
          I2cDetect();
          InitializePi4ioe();
@@ -314,7 +337,7 @@ index 43ed5b5..882715c 100644
          InitializeCamera();
          InitializeButtons();
          SetChargeQcEn(true);
-@@ -519,6 +598,55 @@ public:
+@@ -519,6 +599,55 @@ public:
          return &backlight;
      }
  
@@ -370,13 +393,13 @@ index 43ed5b5..882715c 100644
      // BSP power control functions
      void SetChargeQcEn(bool en) {
          if (pi4ioe2_) {
-@@ -571,4 +699,3 @@ public:
+@@ -571,4 +700,3 @@ public:
  
  
  DECLARE_BOARD(M5StackTab5Board);
 -
 diff --git a/main/display/lcd_display.cc b/main/display/lcd_display.cc
-index be236bb..ee1e59b 100644
+index be236bb..cf39e55 100644
 --- a/main/display/lcd_display.cc
 +++ b/main/display/lcd_display.cc
 @@ -398,13 +398,27 @@ void LcdDisplay::SetupUI() {
@@ -467,8 +490,59 @@ index be236bb..ee1e59b 100644
      battery_label_ = lv_label_create(right_icons);
      lv_label_set_text(battery_label_, "");
      lv_obj_set_style_text_font(battery_label_, icon_font, 0);
+@@ -925,7 +965,7 @@ void LcdDisplay::SetupUI() {
+     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
+ 
+ #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
+-    /* Bottom bar - auto height, grows upward with wrapped text */
++    /* Bottom bar - wrapped subtitle, capped so long text does not cover the screen */
+     bottom_bar_ = lv_obj_create(screen);
+     lv_obj_set_width(bottom_bar_, LV_HOR_RES);
+     lv_obj_set_height(bottom_bar_, LV_SIZE_CONTENT);
+@@ -933,18 +973,20 @@ void LcdDisplay::SetupUI() {
+     lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
+     lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
+     lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
+-    lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(4), 0);
++    lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(3), 0);
+     lv_obj_set_style_border_width(bottom_bar_, 0, 0);
+-    lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
++    lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_AUTO);
++    lv_obj_set_scroll_dir(bottom_bar_, LV_DIR_VER);
+     lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+ 
+     /* chat_message_label_ placed in bottom_bar_, multiline wrapped display */
+     chat_message_label_ = lv_label_create(bottom_bar_);
+     lv_label_set_text(chat_message_label_, "");
+-    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
++    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(6));
+     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP);
+     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
+     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
++    lv_obj_set_style_text_line_space(chat_message_label_, 2, 0);
+     lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
+     lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
+ #else
+@@ -1051,9 +1093,15 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
+         }
+     }
+ #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
+-    // Re-align bottom_bar_ after text change so it stays anchored to the bottom
+-    // as its height adapts to the wrapped content.
+     if (bottom_bar_ != nullptr) {
++        lv_obj_update_layout(chat_message_label_);
++        int32_t max_height = LV_VER_RES * 28 / 100;
++        int32_t target_height = lv_obj_get_height(chat_message_label_) + 24;
++        if (target_height > max_height) {
++            target_height = max_height;
++        }
++        lv_obj_set_height(bottom_bar_, target_height);
++        lv_obj_scroll_to_y(bottom_bar_, 0, LV_ANIM_OFF);
+         lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+     }
+ #endif
 diff --git a/main/display/lvgl_display/lvgl_display.cc b/main/display/lvgl_display/lvgl_display.cc
-index 46668dd..18b5f63 100644
+index 46668dd..ed69b44 100644
 --- a/main/display/lvgl_display/lvgl_display.cc
 +++ b/main/display/lvgl_display/lvgl_display.cc
 @@ -13,6 +13,8 @@
@@ -518,7 +592,32 @@ index 46668dd..18b5f63 100644
      }
  
      // Update time
-@@ -213,6 +227,21 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+@@ -155,6 +169,8 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+     bool charging, discharging;
+     const char* icon = nullptr;
+     if (board.GetBatteryLevel(battery_level, charging, discharging)) {
++        if (battery_level < 0) battery_level = 0;
++        if (battery_level > 100) battery_level = 100;
+         if (charging) {
+             icon = FONT_AWESOME_BATTERY_BOLT;
+         } else {
+@@ -191,6 +207,15 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+                 }
+             }
+         }
++    } else {
++        DisplayLockGuard lock(this);
++        if (battery_label_ != nullptr && battery_icon_ != nullptr) {
++            battery_icon_ = nullptr;
++            lv_label_set_text(battery_label_, "");
++        }
++        if (low_battery_popup_ != nullptr && !lv_obj_has_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN)) {
++            lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
++        }
+     }
+ 
+     // Update network icon every 10 seconds
+@@ -213,6 +238,21 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
                  lv_label_set_text(network_label_, network_icon_);
              }
          }
