@@ -14,7 +14,7 @@ index b324e22..f64c547 100644
                          esp_psram
                          esp_netif
 diff --git a/main/application.cc b/main/application.cc
-index d54ac6b..c9236d3 100644
+index d54ac6b..1e5f534 100644
 --- a/main/application.cc
 +++ b/main/application.cc
 @@ -231,6 +231,7 @@ void Application::Run() {
@@ -161,20 +161,24 @@ index d54ac6b..c9236d3 100644
  
              // Make sure the audio processor is running
              if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {
-@@ -942,9 +976,17 @@ void Application::Schedule(std::function<void()>&& callback) {
+@@ -940,11 +974,20 @@ void Application::Schedule(std::function<void()>&& callback) {
+ }
+ 
  void Application::AbortSpeaking(AbortReason reason) {
-     ESP_LOGI(TAG, "Abort speaking");
+-    ESP_LOGI(TAG, "Abort speaking");
++    ESP_LOGI(TAG, "Abort speaking, reason=%d", (int)reason);
      aborted_ = true;
 +    audio_service_.ResetDecoder();
      if (protocol_) {
          protocol_->SendAbortSpeaking(reason);
      }
-+    if (GetDeviceState() == kDeviceStateSpeaking) {
-+        if (listening_mode_ == kListeningModeManualStop) {
-+            SetDeviceState(kDeviceStateIdle);
-+        } else {
-+            SetDeviceState(kDeviceStateListening);
-+        }
++    if (reason == kAbortReasonWakeWordDetected) {
++        return;
++    }
++    if (GetDeviceState() == kDeviceStateSpeaking || GetDeviceState() == kDeviceStateListening) {
++        SetDeviceState(kDeviceStateIdle);
++        audio_service_.EnableVoiceProcessing(false);
++        audio_service_.EnableWakeWordDetection(true);
 +    }
  }
  
@@ -214,7 +218,7 @@ index 2f915f8..6d59a00 100644
          }
      ]
 diff --git a/main/boards/m5stack-tab5/m5stack_tab5.cc b/main/boards/m5stack-tab5/m5stack_tab5.cc
-index 43ed5b5..a933bfe 100644
+index 43ed5b5..12b42b0 100644
 --- a/main/boards/m5stack-tab5/m5stack_tab5.cc
 +++ b/main/boards/m5stack-tab5/m5stack_tab5.cc
 @@ -10,6 +10,7 @@
@@ -225,7 +229,7 @@ index 43ed5b5..a933bfe 100644
  
  #include <esp_log.h>
  #include "esp_check.h"
-@@ -19,9 +20,14 @@
+@@ -19,9 +20,15 @@
  #include <esp_lcd_panel_vendor.h>
  #include <driver/i2c_master.h>
  #include <driver/spi_common.h>
@@ -237,20 +241,22 @@ index 43ed5b5..a933bfe 100644
  #include "esp_lcd_touch_st7123.h"
 +#include "assets/lang_config.h"
 +#include <cstdlib>
++#include <cstdio>
  #include <cstring>
  
  #define TAG "M5StackTab5Board"
-@@ -92,7 +98,9 @@ private:
+@@ -92,7 +99,10 @@ private:
      EspVideo* camera_ = nullptr;
      Pi4ioe1* pi4ioe1_;
      Pi4ioe2* pi4ioe2_;
 +    Ina226* ina226_;
      esp_lcd_touch_handle_t touch_ = nullptr;
 +    TaskHandle_t touch_task_handle_ = nullptr;
++    bool subtitle_visible_ = true;
  
      void InitializeI2c() {
          i2c_master_bus_config_t i2c_bus_cfg = {
-@@ -157,6 +165,76 @@ private:
+@@ -157,6 +167,109 @@ private:
          });
      }
  
@@ -285,12 +291,34 @@ index 43ed5b5..a933bfe 100644
 +        }
 +    }
 +
++    void HandleTouchLongPress(uint16_t x, uint16_t y) {
++        auto codec = GetAudioCodec();
++        int volume = codec != nullptr ? codec->output_volume() : 0;
++        ESP_LOGI(TAG, "Touch long press at (%u, %u), volume=%d", x, y, volume);
++        char message[48];
++        snprintf(message, sizeof(message), "音量 %d%% · 设置面板", volume);
++        Board::GetInstance().GetDisplay()->ShowNotification(message, 1500);
++    }
++
++    void HandleTouchSwipe(int dx) {
++        subtitle_visible_ = !subtitle_visible_;
++        auto display = Board::GetInstance().GetDisplay();
++        auto lcd_display = dynamic_cast<LcdDisplay*>(display);
++        if (lcd_display != nullptr) {
++            lcd_display->SetHideSubtitle(!subtitle_visible_);
++        }
++        ESP_LOGI(TAG, "Touch swipe dx=%d, subtitle_visible=%d", dx, subtitle_visible_);
++        display->ShowNotification(subtitle_visible_ ? "字幕页" : "状态页", 1200);
++    }
++
 +    void TouchTask() {
 +        bool was_touched = false;
 +        int64_t touch_down_ms = 0;
 +        int64_t last_tap_ms = 0;
 +        uint16_t last_x = 0;
 +        uint16_t last_y = 0;
++        uint16_t current_x = 0;
++        uint16_t current_y = 0;
 +
 +        while (true) {
 +            if (touch_ == nullptr) {
@@ -311,10 +339,21 @@ index 43ed5b5..a933bfe 100644
 +                touch_down_ms = now_ms;
 +                last_x = x[0];
 +                last_y = y[0];
++                current_x = x[0];
++                current_y = y[0];
++            } else if (touched && was_touched) {
++                current_x = x[0];
++                current_y = y[0];
 +            } else if (!touched && was_touched) {
 +                was_touched = false;
 +                int64_t duration_ms = now_ms - touch_down_ms;
-+                if (duration_ms > 30 && duration_ms < 800 && now_ms - last_tap_ms > 300) {
++                int dx = (int)current_x - (int)last_x;
++                int dy = (int)current_y - (int)last_y;
++                if (std::abs(dx) > 120 && std::abs(dx) > std::abs(dy) * 2) {
++                    HandleTouchSwipe(dx);
++                } else if (duration_ms >= 800) {
++                    HandleTouchLongPress(last_x, last_y);
++                } else if (duration_ms > 30 && now_ms - last_tap_ms > 300) {
 +                    last_tap_ms = now_ms;
 +                    HandleTouchTap(last_x, last_y);
 +                }
@@ -327,7 +366,7 @@ index 43ed5b5..a933bfe 100644
      void InitializeGt911TouchPad() {
          ESP_LOGI(TAG, "Init GT911");
   
-@@ -480,7 +558,9 @@ public:
+@@ -480,7 +593,9 @@ public:
          InitializeI2c();
          I2cDetect();
          InitializePi4ioe();
@@ -337,7 +376,7 @@ index 43ed5b5..a933bfe 100644
          InitializeCamera();
          InitializeButtons();
          SetChargeQcEn(true);
-@@ -519,6 +599,55 @@ public:
+@@ -519,6 +634,56 @@ public:
          return &backlight;
      }
  
@@ -366,9 +405,10 @@ index 43ed5b5..a933bfe 100644
 +        // Tab5 INA226: shunt V+ on battery side, V- on charger/load side
 +        // Positive shunt = current OUT of battery = DISCHARGING
 +        // Negative shunt = current INTO battery = CHARGING
-+        discharging = (shunt_uv > 50);
-+        charging = (shunt_uv < -50);
-+        if (!charging && !discharging && mv >= 6500 && mv <= 8300) {
++        const int kBatteryCurrentPresentUv = 1000;  // ~200mA with Tab5 5mOhm shunt
++        discharging = (shunt_uv > kBatteryCurrentPresentUv);
++        charging = (shunt_uv < -kBatteryCurrentPresentUv);
++        if (!charging && !discharging && mv >= 6000 && mv <= 8600) {
 +            level = 0;
 +            ESP_LOGI(TAG, "Battery: no battery current detected (%dmV shunt=%duV), hide battery icon", mv, shunt_uv);
 +            return false;
@@ -393,16 +433,59 @@ index 43ed5b5..a933bfe 100644
      // BSP power control functions
      void SetChargeQcEn(bool en) {
          if (pi4ioe2_) {
-@@ -571,4 +700,3 @@ public:
+@@ -571,4 +736,3 @@ public:
  
  
  DECLARE_BOARD(M5StackTab5Board);
 -
 diff --git a/main/display/lcd_display.cc b/main/display/lcd_display.cc
-index be236bb..cf39e55 100644
+index be236bb..31e586b 100644
 --- a/main/display/lcd_display.cc
 +++ b/main/display/lcd_display.cc
-@@ -398,13 +398,27 @@ void LcdDisplay::SetupUI() {
+@@ -3,6 +3,7 @@
+ #include "settings.h"
+ #include "lvgl_theme.h"
+ #include "assets/lang_config.h"
++#include "application.h"
+ 
+ #include <vector>
+ #include <algorithm>
+@@ -22,6 +23,24 @@ LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
+ LV_FONT_DECLARE(BUILTIN_ICON_FONT);
+ LV_FONT_DECLARE(font_awesome_30_4);
+ 
++#if CONFIG_BOARD_TYPE_M5STACK_CORE_TAB5
++static void StopButtonEventCallback(lv_event_t* e) {
++    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
++        return;
++    }
++    auto& app = Application::GetInstance();
++    app.Schedule([]() {
++        auto& app = Application::GetInstance();
++        auto state = app.GetDeviceState();
++        if (state == kDeviceStateSpeaking) {
++            app.AbortSpeaking(kAbortReasonNone);
++        } else if (state == kDeviceStateListening) {
++            app.StopListening();
++        }
++    });
++}
++#endif
++
+ void LcdDisplay::InitializeLcdThemes() {
+     auto text_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_TEXT_FONT);
+     auto icon_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_ICON_FONT);
+@@ -318,6 +337,9 @@ LcdDisplay::~LcdDisplay() {
+     if (bottom_bar_ != nullptr) {
+         lv_obj_del(bottom_bar_);
+     }
++    if (stop_button_ != nullptr) {
++        lv_obj_del(stop_button_);
++    }
+     if (status_bar_ != nullptr) {
+         lv_obj_del(status_bar_);
+     }
+@@ -398,13 +420,27 @@ void LcdDisplay::SetupUI() {
      lv_obj_set_flex_align(top_bar_, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
      lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
  
@@ -433,7 +516,7 @@ index be236bb..cf39e55 100644
      lv_obj_t* right_icons = lv_obj_create(top_bar_);
      lv_obj_set_size(right_icons, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
      lv_obj_set_style_bg_opa(right_icons, LV_OPA_TRANSP, 0);
-@@ -418,6 +432,12 @@ void LcdDisplay::SetupUI() {
+@@ -418,6 +454,12 @@ void LcdDisplay::SetupUI() {
      lv_obj_set_style_text_font(mute_label_, icon_font, 0);
      lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
  
@@ -446,7 +529,7 @@ index be236bb..cf39e55 100644
      battery_label_ = lv_label_create(right_icons);
      lv_label_set_text(battery_label_, "");
      lv_obj_set_style_text_font(battery_label_, icon_font, 0);
-@@ -869,13 +889,27 @@ void LcdDisplay::SetupUI() {
+@@ -869,13 +911,27 @@ void LcdDisplay::SetupUI() {
      lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
      lv_obj_align(top_bar_, LV_ALIGN_TOP_MID, 0, 0);
  
@@ -477,7 +560,7 @@ index be236bb..cf39e55 100644
      lv_obj_t* right_icons = lv_obj_create(top_bar_);
      lv_obj_set_size(right_icons, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
      lv_obj_set_style_bg_opa(right_icons, LV_OPA_TRANSP, 0);
-@@ -889,6 +923,12 @@ void LcdDisplay::SetupUI() {
+@@ -889,6 +945,12 @@ void LcdDisplay::SetupUI() {
      lv_obj_set_style_text_font(mute_label_, icon_font, 0);
      lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
  
@@ -490,59 +573,177 @@ index be236bb..cf39e55 100644
      battery_label_ = lv_label_create(right_icons);
      lv_label_set_text(battery_label_, "");
      lv_obj_set_style_text_font(battery_label_, icon_font, 0);
-@@ -925,7 +965,7 @@ void LcdDisplay::SetupUI() {
+@@ -925,27 +987,29 @@ void LcdDisplay::SetupUI() {
      lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
  
  #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
 -    /* Bottom bar - auto height, grows upward with wrapped text */
 +    /* Bottom bar - wrapped subtitle, capped so long text does not cover the screen */
      bottom_bar_ = lv_obj_create(screen);
-     lv_obj_set_width(bottom_bar_, LV_HOR_RES);
+-    lv_obj_set_width(bottom_bar_, LV_HOR_RES);
++    lv_obj_set_width(bottom_bar_, LV_HOR_RES - lvgl_theme->spacing(10));
      lv_obj_set_height(bottom_bar_, LV_SIZE_CONTENT);
-@@ -933,18 +973,20 @@ void LcdDisplay::SetupUI() {
+-    lv_obj_set_style_radius(bottom_bar_, 0, 0);
++    lv_obj_set_style_radius(bottom_bar_, lvgl_theme->spacing(4), 0);
      lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
-     lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
+-    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
++    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_70, 0);
      lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
 -    lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(4), 0);
-+    lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(3), 0);
++    lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(2), 0);
      lv_obj_set_style_border_width(bottom_bar_, 0, 0);
 -    lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
+-    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
 +    lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_AUTO);
 +    lv_obj_set_scroll_dir(bottom_bar_, LV_DIR_VER);
-     lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
++    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -lvgl_theme->spacing(2));
  
      /* chat_message_label_ placed in bottom_bar_, multiline wrapped display */
      chat_message_label_ = lv_label_create(bottom_bar_);
      lv_label_set_text(chat_message_label_, "");
 -    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
-+    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(6));
++    lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(16));
      lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP);
      lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
      lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
-+    lv_obj_set_style_text_line_space(chat_message_label_, 2, 0);
-     lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
+-    lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
++    lv_obj_set_style_text_line_space(chat_message_label_, 0, 0);
++    lv_obj_align(chat_message_label_, LV_ALIGN_TOP_MID, 0, 0);
      lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
  #else
-@@ -1051,9 +1093,15 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
+     /* Top layer: Bottom bar - fixed height at bottom */
+@@ -980,6 +1044,31 @@ void LcdDisplay::SetupUI() {
+     lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
+ #endif
+ 
++#if CONFIG_BOARD_TYPE_M5STACK_CORE_TAB5
++    stop_button_ = lv_button_create(screen);
++    lv_obj_set_size(stop_button_, 96, 44);
++    lv_obj_align(stop_button_, LV_ALIGN_BOTTOM_RIGHT, -lvgl_theme->spacing(4), -lvgl_theme->spacing(16));
++    lv_obj_set_style_radius(stop_button_, 22, 0);
++    lv_obj_set_style_bg_color(stop_button_, lv_color_hex(0xD84835), 0);
++    lv_obj_set_style_bg_opa(stop_button_, LV_OPA_80, 0);
++    lv_obj_set_style_border_width(stop_button_, 0, 0);
++    lv_obj_set_style_shadow_width(stop_button_, 16, 0);
++    lv_obj_set_style_shadow_opa(stop_button_, LV_OPA_30, 0);
++    lv_obj_add_event_cb(stop_button_, StopButtonEventCallback, LV_EVENT_CLICKED, nullptr);
++    stop_button_label_ = lv_label_create(stop_button_);
++    lv_label_set_text(stop_button_label_, "停止");
++    lv_obj_set_style_text_color(stop_button_label_, lv_color_white(), 0);
++    lv_obj_center(stop_button_label_);
++    lv_obj_add_flag(stop_button_, LV_OBJ_FLAG_HIDDEN);
++
++    if (status_label_ != nullptr) {
++        lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
++    }
++    if (emoji_box_ != nullptr) {
++        lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
++    }
++#endif
++
+     low_battery_popup_ = lv_obj_create(screen);
+     lv_obj_set_scrollbar_mode(low_battery_popup_, LV_SCROLLBAR_MODE_OFF);
+     lv_obj_set_size(low_battery_popup_, LV_HOR_RES * 0.9, text_font->line_height * 2);
+@@ -1003,7 +1092,11 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
+ 
+     if (image == nullptr) {
+         esp_timer_stop(preview_timer_);
++#if CONFIG_BOARD_TYPE_M5STACK_CORE_TAB5
++        lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
++#else
+         lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
++#endif
+         lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
+         preview_image_cached_.reset();
+         if (gif_controller_) {
+@@ -1051,10 +1144,17 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
          }
      }
  #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
 -    // Re-align bottom_bar_ after text change so it stays anchored to the bottom
 -    // as its height adapts to the wrapped content.
      if (bottom_bar_ != nullptr) {
+-        lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
 +        lv_obj_update_layout(chat_message_label_);
 +        int32_t max_height = LV_VER_RES * 28 / 100;
-+        int32_t target_height = lv_obj_get_height(chat_message_label_) + 24;
++        int32_t target_height = lv_obj_get_height(chat_message_label_) + 18;
 +        if (target_height > max_height) {
 +            target_height = max_height;
 +        }
 +        lv_obj_set_height(bottom_bar_, target_height);
++        lv_obj_align(chat_message_label_, LV_ALIGN_TOP_MID, 0, 0);
 +        lv_obj_scroll_to_y(bottom_bar_, 0, LV_ANIM_OFF);
-         lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
++        lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -8);
      }
  #endif
+ }
+@@ -1071,10 +1171,43 @@ void LcdDisplay::ClearChatMessages() {
+ }
+ #endif
+ 
++void LcdDisplay::SetStatus(const char* status) {
++    LvglDisplay::SetStatus(status);
++#if CONFIG_BOARD_TYPE_M5STACK_CORE_TAB5
++    DisplayLockGuard lock(this);
++    if (status_label_ != nullptr) {
++        lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
++    }
++    if (stop_button_ != nullptr) {
++        auto state = Application::GetInstance().GetDeviceState();
++        if (state == kDeviceStateSpeaking || state == kDeviceStateListening) {
++            lv_obj_remove_flag(stop_button_, LV_OBJ_FLAG_HIDDEN);
++        } else {
++            lv_obj_add_flag(stop_button_, LV_OBJ_FLAG_HIDDEN);
++        }
++    }
++#endif
++}
++
+ void LcdDisplay::SetEmotion(const char* emotion) {
+     if (!setup_ui_called_) {
+         ESP_LOGW(TAG, "SetEmotion('%s') called before SetupUI() - emotion will not be displayed!", emotion);
+     }
++#if CONFIG_BOARD_TYPE_M5STACK_CORE_TAB5
++    {
++        DisplayLockGuard lock(this);
++        if (emoji_box_ != nullptr) {
++            lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
++        }
++        if (emoji_image_ != nullptr) {
++            lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
++        }
++        if (emoji_label_ != nullptr) {
++            lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
++        }
++    }
++    return;
++#endif
+     if (emoji_image_ == nullptr) {
+         if (setup_ui_called_) {
+             ESP_LOGW(TAG, "SetEmotion('%s') failed: emoji_image_ is nullptr (SetupUI() was called but emoji image not created)", emotion);
+diff --git a/main/display/lcd_display.h b/main/display/lcd_display.h
+index e5be55e..360554d 100644
+--- a/main/display/lcd_display.h
++++ b/main/display/lcd_display.h
+@@ -26,6 +26,8 @@ protected:
+     lv_obj_t* container_ = nullptr;
+     lv_obj_t* side_bar_ = nullptr;
+     lv_obj_t* bottom_bar_ = nullptr;
++    lv_obj_t* stop_button_ = nullptr;
++    lv_obj_t* stop_button_label_ = nullptr;
+     lv_obj_t* preview_image_ = nullptr;
+     lv_obj_t* emoji_label_ = nullptr;
+     lv_obj_t* emoji_image_ = nullptr;
+@@ -46,6 +48,7 @@ protected:
+     
+ public:
+     ~LcdDisplay();
++    virtual void SetStatus(const char* status) override;
+     virtual void SetEmotion(const char* emotion) override;
+     virtual void SetChatMessage(const char* role, const char* content) override;
+     virtual void ClearChatMessages() override;
 diff --git a/main/display/lvgl_display/lvgl_display.cc b/main/display/lvgl_display/lvgl_display.cc
-index 46668dd..ed69b44 100644
+index 46668dd..b36beb7 100644
 --- a/main/display/lvgl_display/lvgl_display.cc
 +++ b/main/display/lvgl_display/lvgl_display.cc
 @@ -13,6 +13,8 @@
@@ -607,7 +808,7 @@ index 46668dd..ed69b44 100644
          }
 +    } else {
 +        DisplayLockGuard lock(this);
-+        if (battery_label_ != nullptr && battery_icon_ != nullptr) {
++        if (battery_label_ != nullptr) {
 +            battery_icon_ = nullptr;
 +            lv_label_set_text(battery_label_, "");
 +        }

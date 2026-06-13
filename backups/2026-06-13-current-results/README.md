@@ -46,3 +46,16 @@ Secrets intentionally excluded or redacted:
 - DashScope API key.
 - Xiaozhi cloud MCP endpoint token.
 - Runtime cache and tool call logs.
+## 2026-06-14 P0-P3 follow-up
+
+Additional Tab5 fixes after user testing:
+
+- P0: normal touch/button stop now aborts local playback, returns to idle immediately, and explicitly re-enables wake-word detection.
+- P1: multiline subtitle card now top-aligns text, uses tighter line spacing, and adds height buffer to avoid clipping the first line.
+- P2: Tab5 default UI hides central status/emotion, shows a small floating `停止` button while speaking/listening, supports long press for volume/settings hint, and horizontal swipes to toggle subtitle/status page mode.
+- P3: no-battery detection uses a larger shunt-current threshold and clears stale battery labels whenever battery data is invalid.
+
+Build and flash status:
+
+- Build succeeded after P0-P3 follow-up.
+- Flash to COM7 succeeded after P0-P3 follow-up.
