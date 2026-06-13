@@ -1,0 +1,730 @@
+diff --git a/main/CMakeLists.txt b/main/CMakeLists.txt
+index b324e22..f64c547 100644
+--- a/main/CMakeLists.txt
++++ b/main/CMakeLists.txt
+@@ -1012,6 +1012,10 @@ idf_component_register(SRCS ${SOURCES}
+                     INCLUDE_DIRS ${INCLUDE_DIRS}
+                     WHOLE_ARCHIVE
+                     PRIV_REQUIRES
++                        esp_http_client
++                        esp-tls
++                        json
++                        nvs_flash
+                         esp_pm
+                         esp_psram
+                         esp_netif
+diff --git a/main/application.cc b/main/application.cc
+index d54ac6b..c9236d3 100644
+--- a/main/application.cc
++++ b/main/application.cc
+@@ -231,6 +231,7 @@ void Application::Run() {
+ 
+         if (bits & MAIN_EVENT_VAD_CHANGE) {
+             if (GetDeviceState() == kDeviceStateListening) {
++                ESP_LOGI(TAG, "VAD changed, speaking=%d", audio_service_.IsVoiceDetected());
+                 auto led = Board::GetInstance().GetLed();
+                 led->OnStateChanged();
+             }
+@@ -249,6 +250,21 @@ void Application::Run() {
+             clock_ticks_++;
+             auto display = Board::GetInstance().GetDisplay();
+             display->UpdateStatusBar();
++
++            if (GetDeviceState() == kDeviceStateListening) {
++                if (audio_service_.IsVoiceDetected()) {
++                    listening_silence_ticks_ = 0;
++                } else if (++listening_silence_ticks_ >= 12) {
++                    ESP_LOGW(TAG, "Listening silence timeout, returning to idle");
++                    if (protocol_) {
++                        protocol_->SendStopListening();
++                    }
++                    SetDeviceState(kDeviceStateIdle);
++                    listening_silence_ticks_ = 0;
++                }
++            } else {
++                listening_silence_ticks_ = 0;
++            }
+         
+             // Print debug info every 10 seconds
+             if (clock_ticks_ % 10 == 0) {
+@@ -496,9 +512,10 @@ void Application::InitializeProtocol() {
+     });
+     
+     protocol_->OnIncomingAudio([this](std::unique_ptr<AudioStreamPacket> packet) {
+-        if (GetDeviceState() == kDeviceStateSpeaking) {
+-            audio_service_.PushPacketToDecodeQueue(std::move(packet));
++        if (aborted_) {
++            return;
+         }
++        audio_service_.PushPacketToDecodeQueue(std::move(packet));
+     });
+     
+     protocol_->OnAudioChannelOpened([this, codec, &board]() {
+@@ -696,7 +713,8 @@ void Application::HandleToggleChatEvent() {
+         ListeningMode mode = GetDefaultListeningMode();
+         if (!protocol_->IsAudioChannelOpened()) {
+             SetDeviceState(kDeviceStateConnecting);
+-            // Schedule to let the state change be processed first (UI update)
++            // Opening the audio channel waits for server hello; defer it so the
++            // connecting state and UI update are handled before any blocking wait.
+             Schedule([this, mode]() {
+                 ContinueOpenAudioChannel(mode);
+             });
+@@ -713,6 +731,7 @@ void Application::HandleToggleChatEvent() {
+ void Application::ContinueOpenAudioChannel(ListeningMode mode) {
+     // Check state again in case it was changed during scheduling
+     if (GetDeviceState() != kDeviceStateConnecting) {
++        ESP_LOGW(TAG, "Skip opening audio channel, state changed to %d", (int)GetDeviceState());
+         return;
+     }
+ 
+@@ -721,11 +740,14 @@ void Application::ContinueOpenAudioChannel(ListeningMode mode) {
+     board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
+ 
+     if (!protocol_->IsAudioChannelOpened()) {
++        ESP_LOGI(TAG, "Opening audio channel, mode=%d", (int)mode);
+         if (!protocol_->OpenAudioChannel()) {
++            ESP_LOGW(TAG, "OpenAudioChannel failed");
+             return;
+         }
+     }
+ 
++    ESP_LOGI(TAG, "Audio channel ready, entering listening mode=%d", (int)mode);
+     SetListeningMode(mode);
+ }
+ 
+@@ -749,7 +771,6 @@ void Application::HandleStartListeningEvent() {
+     if (state == kDeviceStateIdle) {
+         if (!protocol_->IsAudioChannelOpened()) {
+             SetDeviceState(kDeviceStateConnecting);
+-            // Schedule to let the state change be processed first (UI update)
+             Schedule([this]() {
+                 ContinueOpenAudioChannel(kListeningModeManualStop);
+             });
+@@ -792,8 +813,6 @@ void Application::HandleWakeWordDetectedEvent() {
+ 
+         if (!protocol_->IsAudioChannelOpened()) {
+             SetDeviceState(kDeviceStateConnecting);
+-            // Schedule to let the state change be processed first (UI update),
+-            // then continue with OpenAudioChannel which may block for ~1 second
+             Schedule([this, wake_word]() {
+                 ContinueWakeWordInvoke(wake_word);
+             });
+@@ -826,6 +845,7 @@ void Application::HandleWakeWordDetectedEvent() {
+ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
+     // Check state again in case it was changed during scheduling
+     if (GetDeviceState() != kDeviceStateConnecting) {
++        ESP_LOGW(TAG, "Skip wake word invoke, state changed to %d", (int)GetDeviceState());
+         return;
+     }
+ 
+@@ -834,13 +854,22 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
+     board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
+ 
+     if (!protocol_->IsAudioChannelOpened()) {
++        ESP_LOGI(TAG, "Opening audio channel for wake word: %s", wake_word.c_str());
+         if (!protocol_->OpenAudioChannel()) {
++            ESP_LOGW(TAG, "OpenAudioChannel failed for wake word");
++            audio_service_.EnableWakeWordDetection(true);
++            return;
++        }
++        // Bug 3: Verify channel still valid after blocking OpenAudioChannel
++        if (!protocol_->IsAudioChannelOpened()) {
++            ESP_LOGW(TAG, "Audio channel became invalid during OpenAudioChannel");
++            protocol_->CloseAudioChannel();
+             audio_service_.EnableWakeWordDetection(true);
+             return;
+         }
+     }
+ 
+-    ESP_LOGI(TAG, "Wake word detected: %s", wake_word.c_str());
++    ESP_LOGI(TAG, "Wake word invoke: %s", wake_word.c_str());
+ #if CONFIG_SEND_WAKE_WORD_DATA
+     // Encode and send the wake word data to the server
+     while (auto packet = audio_service_.PopWakeWordPacket()) {
+@@ -860,6 +889,7 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
+ void Application::HandleStateChangedEvent() {
+     DeviceState new_state = state_machine_.GetState();
+     clock_ticks_ = 0;
++    listening_silence_ticks_ = 0;
+ 
+     auto& board = Board::GetInstance();
+     auto display = board.GetDisplay();
+@@ -883,6 +913,10 @@ void Application::HandleStateChangedEvent() {
+         case kDeviceStateListening:
+             display->SetStatus(Lang::Strings::LISTENING);
+             display->SetEmotion("neutral");
++            ESP_LOGI(TAG, "Listening mode=%d voice_processing=%d popup=%d",
++                     (int)listening_mode_,
++                     audio_service_.IsAudioProcessorRunning(),
++                     play_popup_on_listening_);
+ 
+             // Make sure the audio processor is running
+             if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {
+@@ -942,9 +976,17 @@ void Application::Schedule(std::function<void()>&& callback) {
+ void Application::AbortSpeaking(AbortReason reason) {
+     ESP_LOGI(TAG, "Abort speaking");
+     aborted_ = true;
++    audio_service_.ResetDecoder();
+     if (protocol_) {
+         protocol_->SendAbortSpeaking(reason);
+     }
++    if (GetDeviceState() == kDeviceStateSpeaking) {
++        if (listening_mode_ == kListeningModeManualStop) {
++            SetDeviceState(kDeviceStateIdle);
++        } else {
++            SetDeviceState(kDeviceStateListening);
++        }
++    }
+ }
+ 
+ void Application::SetListeningMode(ListeningMode mode) {
+diff --git a/main/application.h b/main/application.h
+index cb635d4..dd7315d 100644
+--- a/main/application.h
++++ b/main/application.h
+@@ -145,6 +145,7 @@ private:
+     bool assets_version_checked_ = false;
+     bool play_popup_on_listening_ = false;  // Flag to play popup sound after state changes to listening
+     int clock_ticks_ = 0;
++    int listening_silence_ticks_ = 0;
+     TaskHandle_t activation_task_handle_ = nullptr;
+ 
+ 
+diff --git a/main/boards/m5stack-tab5/m5stack_tab5.cc b/main/boards/m5stack-tab5/m5stack_tab5.cc
+index 43ed5b5..882715c 100644
+--- a/main/boards/m5stack-tab5/m5stack_tab5.cc
++++ b/main/boards/m5stack-tab5/m5stack_tab5.cc
+@@ -10,6 +10,7 @@
+ #include "esp_video.h"
+ #include "esp_video_init.h"
+ #include "esp_cam_sensor_xclk.h"
++#include "ina226.h"
+ 
+ #include <esp_log.h>
+ #include "esp_check.h"
+@@ -19,9 +20,14 @@
+ #include <esp_lcd_panel_vendor.h>
+ #include <driver/i2c_master.h>
+ #include <driver/spi_common.h>
++#include <freertos/FreeRTOS.h>
++#include <freertos/task.h>
++#include <esp_timer.h>
+ #include "i2c_device.h"
+ #include "esp_lcd_touch_gt911.h"
+ #include "esp_lcd_touch_st7123.h"
++#include "assets/lang_config.h"
++#include <cstdlib>
+ #include <cstring>
+ 
+ #define TAG "M5StackTab5Board"
+@@ -92,7 +98,9 @@ private:
+     EspVideo* camera_ = nullptr;
+     Pi4ioe1* pi4ioe1_;
+     Pi4ioe2* pi4ioe2_;
++    Ina226* ina226_;
+     esp_lcd_touch_handle_t touch_ = nullptr;
++    TaskHandle_t touch_task_handle_ = nullptr;
+ 
+     void InitializeI2c() {
+         i2c_master_bus_config_t i2c_bus_cfg = {
+@@ -157,6 +165,75 @@ private:
+         });
+     }
+ 
++    static void TouchTaskEntry(void* arg) {
++        auto* self = static_cast<M5StackTab5Board*>(arg);
++        self->TouchTask();
++        vTaskDelete(nullptr);
++    }
++
++    void InitializeTouchActions() {
++        if (touch_ == nullptr) {
++            ESP_LOGW(TAG, "Touch action task skipped: touch panel is not initialized");
++            return;
++        }
++        xTaskCreatePinnedToCore(TouchTaskEntry, "tab5_touch", 4096, this, 5, &touch_task_handle_, 1);
++    }
++
++    void HandleTouchTap(uint16_t x, uint16_t y) {
++        auto& app = Application::GetInstance();
++        auto state = app.GetDeviceState();
++        ESP_LOGI(TAG, "Touch tap at (%u, %u), state=%d", x, y, (int)state);
++
++        if (state == kDeviceStateSpeaking) {
++            app.Schedule([&app]() {
++                app.AbortSpeaking(kAbortReasonNone);
++                Board::GetInstance().GetDisplay()->ShowNotification("已停止播放", 1000);
++            });
++        } else if (state == kDeviceStateListening) {
++            app.StopListening();
++            Board::GetInstance().GetDisplay()->ShowNotification("已停止聆听", 1000);
++        }
++    }
++
++    void TouchTask() {
++        bool was_touched = false;
++        int64_t touch_down_ms = 0;
++        int64_t last_tap_ms = 0;
++        uint16_t last_x = 0;
++        uint16_t last_y = 0;
++
++        while (true) {
++            if (touch_ == nullptr) {
++                vTaskDelay(pdMS_TO_TICKS(100));
++                continue;
++            }
++
++            esp_lcd_touch_read_data(touch_);
++            uint16_t x[1] = {0};
++            uint16_t y[1] = {0};
++            uint16_t strength[1] = {0};
++            uint8_t point_num = 0;
++            bool touched = esp_lcd_touch_get_coordinates(touch_, x, y, strength, &point_num, 1) && point_num > 0;
++            int64_t now_ms = esp_timer_get_time() / 1000;
++
++            if (touched && !was_touched) {
++                was_touched = true;
++                touch_down_ms = now_ms;
++                last_x = x[0];
++                last_y = y[0];
++            } else if (!touched && was_touched) {
++                was_touched = false;
++                int64_t duration_ms = now_ms - touch_down_ms;
++                if (duration_ms > 30 && duration_ms < 800 && now_ms - last_tap_ms > 300) {
++                    last_tap_ms = now_ms;
++                    HandleTouchTap(last_x, last_y);
++                }
++            }
++
++            vTaskDelay(pdMS_TO_TICKS(30));
++        }
++    }
++
+     void InitializeGt911TouchPad() {
+         ESP_LOGI(TAG, "Init GT911");
+  
+@@ -480,7 +557,9 @@ public:
+         InitializeI2c();
+         I2cDetect();
+         InitializePi4ioe();
++        ina226_ = new Ina226(i2c_bus_, 0x41);
+         InitializeDisplay();  // Auto-detect and initialize display + touch
++        InitializeTouchActions();
+         InitializeCamera();
+         InitializeButtons();
+         SetChargeQcEn(true);
+@@ -519,6 +598,55 @@ public:
+         return &backlight;
+     }
+ 
++
++    virtual bool GetBatteryLevel(int &level, bool& charging, bool& discharging) override {
++        if (ina226_ == nullptr) {
++            ESP_LOGW(TAG, "Battery: INA226 is not initialized");
++            return false;
++        }
++
++        int mv = ina226_->ReadBusVoltageMv();
++        if (mv <= 0) {
++            level = 0;
++            charging = false;
++            discharging = false;
++            ESP_LOGW(TAG, "Battery: invalid INA226 bus voltage %dmV", mv);
++            return true;
++        }
++        if (mv < 5000 || mv > 9000) {
++            level = 0;
++            charging = false;
++            discharging = false;
++            return true;
++        }
++        int shunt_uv = ina226_->ReadShuntVoltageUv();
++        // Tab5 INA226: shunt V+ on battery side, V- on charger/load side
++        // Positive shunt = current OUT of battery = DISCHARGING
++        // Negative shunt = current INTO battery = CHARGING
++        discharging = (shunt_uv > 50);
++        charging = (shunt_uv < -50);
++        if (!charging && !discharging && mv >= 6500 && mv <= 8300) {
++            level = 0;
++            ESP_LOGI(TAG, "Battery: no battery current detected (%dmV shunt=%duV), hide battery icon", mv, shunt_uv);
++            return false;
++        }
++        if (mv < 6000) {
++            level = 0;
++        } else {
++            level = (mv - 6000) * 100 / (8400 - 6000);
++            if (level < 0) level = 0;
++            if (level > 100) level = 100;
++        }
++
++        uint16_t raw_bus = 0;
++        int16_t raw_shunt = 0;
++        ina226_->ReadRawBusVoltage(raw_bus);
++        ina226_->ReadRawShuntVoltage(raw_shunt);
++        ESP_LOGI(TAG, "Battery: %dmV %d%% shunt=%duV ch=%d dis=%d raw_bus=0x%04x raw_shunt=%d",
++                 mv, level, shunt_uv, charging, discharging, raw_bus, raw_shunt);
++        return true;
++    }
++
+     // BSP power control functions
+     void SetChargeQcEn(bool en) {
+         if (pi4ioe2_) {
+@@ -571,4 +699,3 @@ public:
+ 
+ 
+ DECLARE_BOARD(M5StackTab5Board);
+-
+diff --git a/main/display/lcd_display.cc b/main/display/lcd_display.cc
+index be236bb..ee1e59b 100644
+--- a/main/display/lcd_display.cc
++++ b/main/display/lcd_display.cc
+@@ -398,13 +398,27 @@ void LcdDisplay::SetupUI() {
+     lv_obj_set_flex_align(top_bar_, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+     lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
+ 
+-    // Left icon
+-    network_label_ = lv_label_create(top_bar_);
++    // Left: network icon + SSID text
++    lv_obj_t* left_icons = lv_obj_create(top_bar_);
++    lv_obj_set_size(left_icons, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
++    lv_obj_set_style_bg_opa(left_icons, LV_OPA_TRANSP, 0);
++    lv_obj_set_style_border_width(left_icons, 0, 0);
++    lv_obj_set_style_pad_all(left_icons, 0, 0);
++    lv_obj_set_flex_flow(left_icons, LV_FLEX_FLOW_ROW);
++    lv_obj_set_flex_align(left_icons, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
++
++    network_label_ = lv_label_create(left_icons);
+     lv_label_set_text(network_label_, "");
+     lv_obj_set_style_text_font(network_label_, icon_font, 0);
+     lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+ 
+-    // Right icons container
++    wifi_ssid_label_ = lv_label_create(left_icons);
++    lv_label_set_text(wifi_ssid_label_, "");
++    lv_obj_set_style_text_font(wifi_ssid_label_, text_font, 0);
++    lv_obj_set_style_text_color(wifi_ssid_label_, lvgl_theme->text_color(), 0);
++    lv_obj_set_style_margin_left(wifi_ssid_label_, lvgl_theme->spacing(2), 0);
++
++    // Right: volume + battery icons
+     lv_obj_t* right_icons = lv_obj_create(top_bar_);
+     lv_obj_set_size(right_icons, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+     lv_obj_set_style_bg_opa(right_icons, LV_OPA_TRANSP, 0);
+@@ -418,6 +432,12 @@ void LcdDisplay::SetupUI() {
+     lv_obj_set_style_text_font(mute_label_, icon_font, 0);
+     lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
+ 
++    volume_label_ = lv_label_create(right_icons);
++    lv_label_set_text(volume_label_, "");
++    lv_obj_set_style_text_font(volume_label_, text_font, 0);
++    lv_obj_set_style_text_color(volume_label_, lvgl_theme->text_color(), 0);
++    lv_obj_set_style_margin_left(volume_label_, lvgl_theme->spacing(2), 0);
++
+     battery_label_ = lv_label_create(right_icons);
+     lv_label_set_text(battery_label_, "");
+     lv_obj_set_style_text_font(battery_label_, icon_font, 0);
+@@ -869,13 +889,27 @@ void LcdDisplay::SetupUI() {
+     lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
+     lv_obj_align(top_bar_, LV_ALIGN_TOP_MID, 0, 0);
+ 
+-    // Left icon
+-    network_label_ = lv_label_create(top_bar_);
++    // Left icons: network signal + SSID
++    lv_obj_t* left_icons = lv_obj_create(top_bar_);
++    lv_obj_set_size(left_icons, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
++    lv_obj_set_style_bg_opa(left_icons, LV_OPA_TRANSP, 0);
++    lv_obj_set_style_border_width(left_icons, 0, 0);
++    lv_obj_set_style_pad_all(left_icons, 0, 0);
++    lv_obj_set_flex_flow(left_icons, LV_FLEX_FLOW_ROW);
++    lv_obj_set_flex_align(left_icons, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
++
++    network_label_ = lv_label_create(left_icons);
+     lv_label_set_text(network_label_, "");
+     lv_obj_set_style_text_font(network_label_, icon_font, 0);
+     lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+ 
+-    // Right icons container
++    wifi_ssid_label_ = lv_label_create(left_icons);
++    lv_label_set_text(wifi_ssid_label_, "");
++    lv_obj_set_style_text_font(wifi_ssid_label_, text_font, 0);
++    lv_obj_set_style_text_color(wifi_ssid_label_, lvgl_theme->text_color(), 0);
++    lv_obj_set_style_margin_left(wifi_ssid_label_, lvgl_theme->spacing(2), 0);
++
++    // Right icons: mute + volume% + battery
+     lv_obj_t* right_icons = lv_obj_create(top_bar_);
+     lv_obj_set_size(right_icons, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+     lv_obj_set_style_bg_opa(right_icons, LV_OPA_TRANSP, 0);
+@@ -889,6 +923,12 @@ void LcdDisplay::SetupUI() {
+     lv_obj_set_style_text_font(mute_label_, icon_font, 0);
+     lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
+ 
++    volume_label_ = lv_label_create(right_icons);
++    lv_label_set_text(volume_label_, "");
++    lv_obj_set_style_text_font(volume_label_, text_font, 0);
++    lv_obj_set_style_text_color(volume_label_, lvgl_theme->text_color(), 0);
++    lv_obj_set_style_margin_left(volume_label_, lvgl_theme->spacing(2), 0);
++
+     battery_label_ = lv_label_create(right_icons);
+     lv_label_set_text(battery_label_, "");
+     lv_obj_set_style_text_font(battery_label_, icon_font, 0);
+diff --git a/main/display/lvgl_display/lvgl_display.cc b/main/display/lvgl_display/lvgl_display.cc
+index 46668dd..18b5f63 100644
+--- a/main/display/lvgl_display/lvgl_display.cc
++++ b/main/display/lvgl_display/lvgl_display.cc
+@@ -13,6 +13,8 @@
+ #include "assets/lang_config.h"
+ #include "jpg/image_to_jpeg.h"
+ 
++#include <wifi_manager.h>
++
+ #define TAG "Display"
+ 
+ LvglDisplay::LvglDisplay() {
+@@ -115,21 +117,33 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+     auto& board = Board::GetInstance();
+     auto codec = board.GetAudioCodec();
+ 
+-    // Update mute icon
++    // Update mute icon and volume text
+     {
+         DisplayLockGuard lock(this);
+         if (mute_label_ == nullptr) {
+             return;
+         }
+ 
+-        // Update icon if mute state changes
+-        if (codec->output_volume() == 0 && !muted_) {
++        int vol = codec->output_volume();
++        // Mute icon
++        if (vol == 0 && !muted_) {
+             muted_ = true;
+             lv_label_set_text(mute_label_, FONT_AWESOME_VOLUME_XMARK);
+-        } else if (codec->output_volume() > 0 && muted_) {
++        } else if (vol > 0 && muted_) {
+             muted_ = false;
+             lv_label_set_text(mute_label_, "");
+         }
++        // Volume percentage text (only when unmuted and changed)
++        if (volume_label_ != nullptr) {
++            if (vol > 0 && vol != last_volume_) {
++                last_volume_ = vol;
++                char buf[16];
++                snprintf(buf, sizeof(buf), "%d%%", vol);
++                lv_label_set_text(volume_label_, buf);
++            } else if (vol == 0) {
++                lv_label_set_text(volume_label_, "");
++            }
++        }
+     }
+ 
+     // Update time
+@@ -213,6 +227,21 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+                 lv_label_set_text(network_label_, network_icon_);
+             }
+         }
++        // Update SSID text
++        if (wifi_ssid_label_ != nullptr) {
++            auto& wifi = WifiManager::GetInstance();
++            std::string ssid;
++            if (!wifi.IsConfigMode() && wifi.IsConnected()) {
++                ssid = wifi.GetSsid();
++                // Truncate to ~8 chars max to fit in top bar
++                if (ssid.length() > 8) ssid = ssid.substr(0, 7) + "~";
++            }
++            if (ssid != last_ssid_) {
++                DisplayLockGuard lock(this);
++                last_ssid_ = ssid;
++                lv_label_set_text(wifi_ssid_label_, ssid.c_str());
++            }
++        }
+     }
+ 
+     esp_pm_lock_release(pm_lock_);
+diff --git a/main/display/lvgl_display/lvgl_display.h b/main/display/lvgl_display/lvgl_display.h
+index 226a6ff..866c05b 100644
+--- a/main/display/lvgl_display/lvgl_display.h
++++ b/main/display/lvgl_display/lvgl_display.h
+@@ -30,16 +30,20 @@ protected:
+     lv_display_t *display_ = nullptr;
+ 
+     lv_obj_t *network_label_ = nullptr;
++    lv_obj_t *wifi_ssid_label_ = nullptr;
+     lv_obj_t *status_label_ = nullptr;
+     lv_obj_t *notification_label_ = nullptr;
+     lv_obj_t *mute_label_ = nullptr;
++    lv_obj_t *volume_label_ = nullptr;
+     lv_obj_t *battery_label_ = nullptr;
+     lv_obj_t* low_battery_popup_ = nullptr;
+     lv_obj_t* low_battery_label_ = nullptr;
+-    
++
+     const char* battery_icon_ = nullptr;
+     const char* network_icon_ = nullptr;
+     bool muted_ = false;
++    int last_volume_ = -1;
++    std::string last_ssid_;
+ 
+     std::chrono::system_clock::time_point last_status_update_time_;
+     esp_timer_handle_t notification_timer_ = nullptr;
+diff --git a/main/ota.cc b/main/ota.cc
+index bcc0dc5..8747f99 100644
+--- a/main/ota.cc
++++ b/main/ota.cc
+@@ -75,6 +75,9 @@ std::unique_ptr<Http> Ota::SetupHttp() {
+  * Specification: https://ccnphfhqs21z.feishu.cn/wiki/FjW6wZmisimNBBkov6OcmfvknVd
+  */
+ esp_err_t Ota::CheckVersion() {
++    // OTA disabled: our custom firmware should not be overwritten
++    ESP_LOGI(TAG, "OTA check disabled, keeping current firmware");
++    return ESP_OK;
+     auto& board = Board::GetInstance();
+     auto app_desc = esp_app_get_description();
+ 
+diff --git a/main/protocols/mqtt_protocol.cc b/main/protocols/mqtt_protocol.cc
+index d95d003..64a3175 100644
+--- a/main/protocols/mqtt_protocol.cc
++++ b/main/protocols/mqtt_protocol.cc
+@@ -63,7 +63,8 @@ bool MqttProtocol::StartMqttClient(bool report_error) {
+     }
+ 
+     Settings settings("mqtt", false);
+-    auto endpoint = settings.GetString("endpoint");
++    std::string endpoint = settings.GetString("endpoint");
++    ESP_LOGI(TAG, "MQTT endpoint: %s", endpoint.c_str());
+     auto client_id = settings.GetString("client_id");
+     auto username = settings.GetString("username");
+     auto password = settings.GetString("password");
+@@ -95,6 +96,12 @@ bool MqttProtocol::StartMqttClient(bool report_error) {
+             on_connected_();
+         }
+         esp_timer_stop(reconnect_timer_);
++
++        // Bug 2 fix: Subscribe to receive server responses
++        if (!publish_topic_.empty()) {
++            ESP_LOGI(TAG, "Subscribing to topic: %s", publish_topic_.c_str());
++            mqtt_->Subscribe(publish_topic_);
++        }
+     });
+ 
+     mqtt_->OnMessage([this](const std::string& topic, const std::string& payload) {
+@@ -229,7 +236,7 @@ bool MqttProtocol::OpenAudioChannel() {
+         return false;
+     }
+ 
+-    // 等待服务器响应
++    // Wait for server hello before opening UDP.
+     EventBits_t bits = xEventGroupWaitBits(event_group_handle_, MQTT_PROTOCOL_SERVER_HELLO_EVENT, pdTRUE, pdFALSE, pdMS_TO_TICKS(10000));
+     if (!(bits & MQTT_PROTOCOL_SERVER_HELLO_EVENT)) {
+         ESP_LOGE(TAG, "Failed to receive server hello");
+@@ -295,7 +302,7 @@ bool MqttProtocol::OpenAudioChannel() {
+ }
+ 
+ std::string MqttProtocol::GetHelloMessage() {
+-    // 发送 hello 消息申请 UDP 通道
++    // Send hello to request a UDP audio channel.
+     cJSON* root = cJSON_CreateObject();
+     cJSON_AddStringToObject(root, "type", "hello");
+     cJSON_AddNumberToObject(root, "version", 3);
+@@ -366,12 +373,12 @@ void MqttProtocol::ParseServerHello(const cJSON* root) {
+ }
+ 
+ static const char hex_chars[] = "0123456789ABCDEF";
+-// 辅助函数，将单个十六进制字符转换为对应的数值
++// Convert a single hex character to its numeric value.
+ static inline uint8_t CharToHex(char c) {
+     if (c >= '0' && c <= '9') return c - '0';
+     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+-    return 0;  // 对于无效输入，返回0
++    return 0;
+ }
+ 
+ std::string MqttProtocol::DecodeHexString(const std::string& hex_string) {
+diff --git a/main/protocols/mqtt_protocol.h b/main/protocols/mqtt_protocol.h
+index 90963db..0daef02 100644
+--- a/main/protocols/mqtt_protocol.h
++++ b/main/protocols/mqtt_protocol.h
+@@ -1,7 +1,6 @@
+ #ifndef MQTT_PROTOCOL_H
+ #define MQTT_PROTOCOL_H
+ 
+-
+ #include "protocol.h"
+ #include <mqtt.h>
+ #include <udp.h>
+@@ -20,14 +19,12 @@
+ 
+ #define MQTT_PING_INTERVAL_SECONDS 90
+ #define MQTT_RECONNECT_INTERVAL_MS 60000
+-
+ #define MQTT_PROTOCOL_SERVER_HELLO_EVENT (1 << 0)
+ 
+ class MqttProtocol : public Protocol {
+ public:
+     MqttProtocol();
+     ~MqttProtocol();
+-
+     bool Start() override;
+     bool SendAudio(std::unique_ptr<AudioStreamPacket> packet) override;
+     bool OpenAudioChannel() override;
+@@ -35,13 +32,9 @@ public:
+     bool IsAudioChannelOpened() const override;
+ 
+ private:
+-    // Alive flag for safe scheduled callbacks - set to false in destructor
+     std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
+-    
+     EventGroupHandle_t event_group_handle_;
+-
+     std::string publish_topic_;
+-
+     std::mutex channel_mutex_;
+     std::unique_ptr<Mqtt> mqtt_;
+     std::unique_ptr<Udp> udp_;
+@@ -56,10 +49,8 @@ private:
+     bool StartMqttClient(bool report_error=false);
+     void ParseServerHello(const cJSON* root);
+     std::string DecodeHexString(const std::string& hex_string);
+-
+     bool SendText(const std::string& text) override;
+     std::string GetHelloMessage();
+ };
+ 
+-
+ #endif // MQTT_PROTOCOL_H
+diff --git a/sdkconfig.defaults.esp32p4 b/sdkconfig.defaults.esp32p4
+index 43a36de..a09afa4 100644
+--- a/sdkconfig.defaults.esp32p4
++++ b/sdkconfig.defaults.esp32p4
+@@ -17,8 +17,20 @@ CONFIG_SPIRAM_MEMTEST=n
+ CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+ 
+ CONFIG_SLAVE_IDF_TARGET_ESP32C6=y
+-
+-CONFIG_SR_WN_WN9_NIHAOXIAOZHI_TTS=y
++CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE=y
++CONFIG_ESP_HOSTED_SDIO_SLOT_1=y
++CONFIG_ESP_HOSTED_SDIO_4_BIT_BUS=y
++CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_CMD_SLOT_1=13
++CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_CLK_SLOT_1=12
++CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D0_SLOT_1=11
++CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D1_4BIT_BUS_SLOT_1=10
++CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D2_4BIT_BUS_SLOT_1=9
++CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D3_4BIT_BUS_SLOT_1=8
++
++CONFIG_USE_CUSTOM_WAKE_WORD=y
++CONFIG_CUSTOM_WAKE_WORD="ni hao xiao wu"
++CONFIG_CUSTOM_WAKE_WORD_DISPLAY="你好小五"
++CONFIG_SR_MN_CN_MULTINET7_QUANT=y
+ 
+ CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+ 
+@@ -29,3 +41,7 @@ CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE=1024
+ 
+ # LVGL Graphics
+ CONFIG_LV_USE_SNAPSHOT=y
++
++CONFIG_ESP_HOSTED_SDIO_OPTIMIZATION_RX_NONE=y
++# CONFIG_ESP_HOSTED_SDIO_OPTIMIZATION_RX_STREAMING_MODE is not set
++# CONFIG_ESP_HOSTED_SDIO_CHECKSUM is not set
+\ No newline at end of file

@@ -1,0 +1,16 @@
+﻿ M main/CMakeLists.txt
+ M main/application.cc
+ M main/application.h
+ M main/boards/m5stack-tab5/m5stack_tab5.cc
+ M main/display/lcd_display.cc
+ M main/display/lvgl_display/lvgl_display.cc
+ M main/display/lvgl_display/lvgl_display.h
+ M main/main.cc
+ M main/ota.cc
+ M main/protocols/mqtt_protocol.cc
+ M main/protocols/mqtt_protocol.h
+ M sdkconfig.defaults.esp32p4
+?? build_now.bat
+?? build_tab5/
+?? build_xiaozhi.ps1
+?? main/boards/m5stack-tab5/ina226.h

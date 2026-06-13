@@ -1,0 +1,401 @@
+{
+  "mcpEndpoint": "wss://api.xiaozhi.me/mcp/?token=<REDACTED>",
+  "mcpServers": {
+    "calculator": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@xiaozhi-client/calculator-mcp"
+      ]
+    },
+    "datetime": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@xiaozhi-client/datetime-mcp"
+      ]
+    },
+    "tensorfeed": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@tensorfeed/mcp-server"
+      ]
+    }
+  },
+  "asr": {
+    "model": "doubao",
+    "appid": "",
+    "accessToken": ""
+  },
+  "llm": {
+    "prompt": "./prompts/default.md",
+    "model": "",
+    "apiKey": "",
+    "baseURL": ""
+  },
+  "tts": {
+    "model": "doubao",
+    "appid": "",
+    "accessToken": "",
+    "voice_type": "zh_female_xiaohe_uranus_bigtts"
+  },
+  "connection": {
+    "heartbeatInterval": 30000,
+    "heartbeatTimeout": 10000,
+    "reconnectInterval": 5000
+  },
+  "webUI": {
+    "port": 9999
+  },
+  "mcpServerConfig": {
+    "datetime": {
+      "tools": {
+        "get_current_time": {
+          "description": "鑾峰彇褰撳墠鏃堕棿锛屾敮鎸佸绉嶆牸寮?,
+          "enable": true
+        },
+        "get_current_date": {
+          "description": "鑾峰彇褰撳墠鏃ユ湡锛屾敮鎸佸绉嶆牸寮?,
+          "enable": true
+        },
+        "format_datetime": {
+          "description": "灏嗙粰瀹氱殑鏃ユ湡鏃堕棿瀛楃涓叉垨鏃堕棿鎴虫牸寮忓寲涓烘寚瀹氭牸寮?,
+          "enable": true
+        },
+        "add_time": {
+          "description": "鍦ㄧ粰瀹氱殑鏃ユ湡鏃堕棿鍩虹涓婂鍔犳垨鍑忓皯鏃堕棿",
+          "enable": true
+        }
+      }
+    },
+    "tensorfeed": {
+      "tools": {
+        "get_ai_news": {
+          "description": "Get the latest AI news from TensorFeed.ai as a ranked list with title, source, URL, snippet, and publish time, filterable by category (e.g. \"anthropic\", \"openai\", \"research\", \"tools\"). Aggregates 15+ sources (Anthropic, OpenAI, Google, TechCrunch, The Verge, arXiv, and more) into one normalized feed, so an agent reads one schema instead of polling each outlet. Free, no auth.",
+          "enable": true
+        },
+        "get_ai_status": {
+          "description": "Get the real-time operational status of major AI services (Claude, OpenAI, Gemini, Mistral, Cohere, Replicate, Hugging Face), including per-component breakdowns and an operational/degraded/down rollup per provider. One cross-provider status call instead of checking each vendor's status page, useful before an agent routes a request to a model that may be impaired. Free, no auth.",
+          "enable": true
+        },
+        "is_service_down": {
+          "description": "Check whether one named AI service (e.g. \"claude\", \"openai\", \"gemini\", \"mistral\", \"cohere\", \"hugging face\", \"replicate\") is currently operational, degraded, or down, with its component-level breakdown. Matches on service or provider name and lists available services if there is no match, so an agent can gate a call on live status before sending traffic. Free, no auth.",
+          "enable": true
+        },
+        "check_agent_ready": {
+          "description": "Score how agent-ready a website is, 0 to 100, from its public surfaces: x402 payment manifest, /.well-known/agent.json, an OpenAPI spec, llms.txt, AI-bot crawlability, and ai.txt. Returns the score, the tier (closed, emerging, ready, or advanced), and exactly which surfaces the site exposes. Unlike single-site \"is my site agent-ready\" scanners, this reads from TensorFeed's daily-crawled cross-domain dataset, so the same call works for any tracked domain and the scoring rule is published and identical for every site. Free, no auth.",
+          "enable": false
+        },
+        "agent_ready_summary": {
+          "description": "Get the state of the agentic web. Across about 500 curated domains, returns the share exposing each agent surface (x402, agent.json, OpenAPI, llms.txt, crawlable, ai.txt), the readiness-tier distribution, and a top-10 leaderboard of the most agent-ready sites. This aggregate, cross-domain view is exactly what a single-site scanner cannot give you. Free, no auth.",
+          "enable": false
+        },
+        "check_crawler_access": {
+          "description": "Check which AI bots a website allows or blocks in its robots.txt: GPTBot, ClaudeBot, PerplexityBot, CCBot, Google-Extended, Bytespider, and more, with a per-bot verdict (allowed, blocked, partial, or unknown), plus whether the site publishes llms.txt and ai.txt. Reports the site's stated policy, not enforcement (robots.txt compliance is voluntary). Free, no auth.",
+          "enable": false
+        },
+        "crawler_access_summary": {
+          "description": "Get the aggregate AI-crawler access map across about 500 curated domains: the percentage of sites that block each AI bot (the publisher-versus-AI-crawler picture), plus llms.txt and ai.txt adoption rates. Unlike a single-site robots.txt checker, this is the cross-domain trend view of who is shutting AI crawlers out. Free, no auth.",
+          "enable": false
+        },
+        "get_model_pricing": {
+          "description": "Get AI model pricing across major providers (Anthropic, OpenAI, Google, Meta, Mistral, Cohere) in one normalized table: input and output price per 1M tokens, context window, and release date per model. One cross-provider comparison instead of scraping six pricing pages, so an agent can pick the cheapest model that fits its context and budget. Free, no auth.",
+          "enable": true
+        },
+        "get_model_deprecations": {
+          "description": "Get the AI model deprecation calendar. Provider-by-provider registry of model retirements and deprecation announcements (OpenAI, Anthropic, Google, Cohere, and others). Each entry carries the announced/deprecation/sunset dates, the recommended replacement model, and a source URL pointing at the provider's own announcement. Useful for agents who need to know when a model they depend on will stop accepting traffic and what to migrate to.",
+          "enable": true
+        },
+        "get_ai_today": {
+          "description": "Get a quick digest of the top AI stories from the latest TensorFeed news feed, each with title, source, and URL. A shorter, headline-only companion to get_ai_news for when an agent just needs a fast read on what is happening in AI right now rather than the full article set. Free, no auth.",
+          "enable": true
+        },
+        "get_agent_activity": {
+          "description": "Get live AI bot traffic on TensorFeed.ai. Returns today's bot hit count, the most recent 50 hits with bot name + endpoint + timestamp, and a derived top-bots breakdown. Useful when an agent wants to see which crawlers are pulling AI ecosystem data and how that distribution shifts. Free, no auth.",
+          "enable": false
+        },
+        "get_ai_supply_chain_iocs": {
+          "description": "Get the latest AI/ML supply-chain indicators-of-compromise from the TensorFeed defender feed. Daily-refreshed list of GitHub Security Advisory entries filtered by AI/ML/LLM/MCP keyword vocabulary across npm, PyPI, Go, Maven, and other ecosystems. Each entry includes the package name, ecosystem, GHSA advisory ID, severity, summary, vulnerable version range, publication date, and a link to the authoritative GHSA record. Pure data feed: TensorFeed re-publishes already-public advisories, does not detect malware, and does not attribute it. Always treat the linked GHSA record as authoritative. Useful for AI-tool maintainers, MCP-server reviewers, and supply-chain monitors that want a single feed of AI-relevant advisories rather than parsing all of GHSA.",
+          "enable": false
+        },
+        "get_honeypot_iocs": {
+          "description": "Get the TensorFeed honeypot indicators-of-compromise feed. Returns attacker IP addresses, user agents, and target paths observed against TensorFeed.ai trap endpoints over the last 30 days. Pure first-party observation; not a re-export of upstream threat intel. License CC0; downstream defenders may ingest and pre-block at their edge. Each row: ioc value, ioc type (ip / ua / path), first_seen, last_seen, hit_count. Useful as a low-noise honeypot signal layered on top of public IOC feeds.",
+          "enable": false
+        },
+        "check_afta_certification": {
+          "description": "Check whether a domain is AFTA-certified (Agent Fair-Trade Agreement). AFTA is an open standard: cryptographically-signed receipts, transparent pricing, no-charge guarantees for failed responses, on-chain settlement, and federated trust between participating sites. The check runs 6 deterministic probes against the target domain (e.g. tensorfeed.ai, terminalfeed.io): well-known endpoint, receipts endpoint, x402 payment manifest, pricing transparency, free trial availability, federation membership. Returns score, verdict, and which checks passed/failed.",
+          "enable": false
+        },
+        "get_agent_reputation_card": {
+          "description": "Get a TensorFeed Agent Reputation Bureau card for an EVM wallet address or a tf_live_ token prefix. Cards rebuild daily at 04:50 UTC from on-chain receipts plus TF telemetry. Includes reliability score, paid-call activity, total USDC spent, longest paid streak, composite trust score (0-1), trust grade (S/A/B/C/D), flags (sybil_risk, abuse, paid_free_ratio_low), operator-claim status (wallet -> display name signed by EOA), and per-metric leaderboard ranks. Returns null/404 for unknown agents (TF only builds cards for wallets observed in production). Useful for assessing third-party agent trustworthiness before delegating high-value work.",
+          "enable": false
+        },
+        "get_account_balance": {
+          "description": "Check the credit balance for the configured TensorFeed bearer token. Free, but requires TENSORFEED_TOKEN to be set.",
+          "enable": false
+        },
+        "get_account_usage": {
+          "description": "Show per-endpoint usage for the configured TensorFeed token (last 100 calls aggregated). Free, but requires TENSORFEED_TOKEN.",
+          "enable": false
+        },
+        "premium_routing": {
+          "description": "Get a ranked list of recommended AI models for a task (code, reasoning, creative, or general), each with a composite score plus the quality, availability, cost, and latency components that produced it, and the per-model input/output pricing. Constrain with budget, min_quality, and top_n so the ranking reflects your actual limits instead of a generic leaderboard. Costs 1 credit ($0.02), billed against your TENSORFEED_TOKEN. For a single signed routing decision with reasoning, see route_verdict.",
+          "enable": false
+        },
+        "route_verdict_preview": {
+          "description": "Free. TensorFeed's signed routing decision that fuses live pricing, contamination-discounted benchmarks, real production usage, MEASURED p95 latency, incident state, and deprecation flags into the single best model for a task or a named model, with the reasoning. For ranked runners-up, constraint filters, and an AFTA-signed receipt you can audit, use route_verdict. 10 calls per day per IP.",
+          "enable": true
+        },
+        "route_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed routing decision: TensorFeed's single best model plus ranked runners-up for your task or a named model, fused from live pricing, contamination-discounted benchmarks, real production usage, MEASURED p95 latency, incident state, and deprecation flags, with an AFTA-signed receipt over the exact inputs so you can prove why you routed. Versus the free route_verdict_preview it adds ranked runners-up, constraint filters (max p95 latency, budget, min quality, operational-only, exclude-deprecated), the signed receipt, and no rate limit. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "provider_reliability_verdict_preview": {
+          "description": "Free. TensorFeed's signed dependability ruling over its OWN measured latency and availability probes of the frontier AI providers. Names the single most-dependable provider to build on and the riskiest, scoring availability and tail consistency (p50 over p95) equally because an agent retry loop feels the tail, not the median. For the full per-provider ranking and an AFTA-signed receipt, use provider_reliability_verdict. 10 calls per day per IP.",
+          "enable": false
+        },
+        "provider_reliability_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed provider dependability ruling over TensorFeed's OWN measured probes: ranks every probed frontier provider by availability and tail consistency (p50 over p95), names the most dependable and the riskiest, and ships the full per-provider ranking with an AFTA-signed receipt over the measurements. Versus the free provider_reliability_verdict_preview it adds the complete ranking with each provider's measured availability, p50/p95/p99, and tail spread, plus the receipt and no rate limit. 30-minute freshness SLA, no-charge when stale. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "x402_settlement_verdict_preview": {
+          "description": "Free. TensorFeed's signed ruling on the state of the x402 USDC settlement market on Base, computed over its OWN on-chain settlement index: market momentum versus the prior window, concentration, and the leading publisher. For the full per-publisher ranking, ecosystem totals, the Herfindahl concentration index, an optional window, and an AFTA-signed receipt, use x402_settlement_verdict. Covers the publishers TensorFeed indexes on Base, forward-only from launch. 10 calls per day per IP.",
+          "enable": false
+        },
+        "x402_settlement_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed ruling on the Base x402 USDC settlement market over TensorFeed's OWN settlement index: momentum versus the prior window of equal length, concentration by the Herfindahl index over publisher volume share, and the leading publisher, plus the full per-publisher ranking and an AFTA-signed receipt. Versus the free x402_settlement_verdict_preview it adds the per-publisher ranking with volume share, the ecosystem totals and concentration index, an optional window, and the receipt, with no rate limit. 10-minute freshness SLA, no-charge when stale. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "x402_publisher_verdict_preview": {
+          "description": "Free. TensorFeed's signed trust verdict on one x402 publisher, over its OWN on-chain settlement index: whether a named publisher domain is actively settling, recently quiet, registered with no settlement, unreachable, missing a Base payTo, or not indexed. For the 30-day settlement momentum, the shared-wallet risk flag, the settlement evidence, and an AFTA-signed receipt, use x402_publisher_verdict. Requires a domain. 10 calls per day per IP.",
+          "enable": false
+        },
+        "x402_publisher_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed trust verdict on a single x402 publisher over TensorFeed's OWN on-chain settlement index: whether its Base payTo is actively settling, its 30-day settlement momentum, a shared-wallet risk flag, and the settlement evidence, with an AFTA-signed receipt. Versus the free x402_publisher_verdict_preview it adds the momentum band, the shared-wallet flag, and the settlement evidence (volume, count, last settled, daily series), with no rate limit. A not-indexed domain is no-charge. 10-minute freshness SLA. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "stack_safety_verdict_preview": {
+          "description": "Free. TensorFeed's deploy gate for an AI software stack: pass each package name (comma-separated name@version) and get the overall BLOCK / HOLD / PASS / UNKNOWN gate plus a per-package verdict, fusing the ingested AI-stack CVE batch with the CISA KEV catalog. Conservative by design: BLOCK only on an exploited CVE with no fix, HOLD when a known CVE applies and you must verify your version, PASS on no match, UNKNOWN outside the curated AI-stack cohort. For the matched-CVE evidence (ids, ranges, fixes, KEV status), up to 10 packages, and an AFTA-signed receipt, use stack_safety_verdict. Capped at 3 packages, 10 calls per day per IP.",
+          "enable": false
+        },
+        "stack_safety_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed deploy gate for an AI software stack (up to 10 packages): the overall BLOCK / HOLD / PASS / UNKNOWN gate and a per-package verdict, fusing the ingested AI-stack CVE batch with the CISA KEV catalog, plus the matched-CVE evidence and an AFTA-signed receipt. Versus the free stack_safety_verdict_preview it adds the matched-CVE ids, affected ranges, fixed versions, and KEV status per package, raises the cap to 10 packages, and ships the receipt, with no rate limit. Never-false-confirm: BLOCK only on exploited with no fix. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "benchmark_trust_verdict_preview": {
+          "description": "Free. TensorFeed's signed ruling on whether an AI benchmark is still a trustworthy capability signal or saturated, contaminated, or near ceiling so a high score should be down-weighted. Returns a trust band (reliable, use_with_caution, saturated, contaminated, deprecated) and a 0-100 trust score per benchmark. Pass benchmark to narrow to one, or category to filter, or neither for the registry. For the per-signal detail (ceiling proximity, frontier compression, contamination) and the down-weight recommendation with an alternative, use benchmark_trust_verdict. 10 calls per day per IP.",
+          "enable": false
+        },
+        "benchmark_trust_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed ruling on whether an AI benchmark is a trustworthy capability signal or saturated, contaminated, or near ceiling: a trust band and 0-100 score per benchmark, the per-signal detail, a down-weight recommendation with an alternative benchmark, and an AFTA-signed receipt. Versus the free benchmark_trust_verdict_preview it adds the ceiling proximity, frontier compression, and contamination signals, the recommendation, and the receipt, with no rate limit. Pass benchmark to narrow to one, or category to filter, or neither for the registry. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "failover_verdict_preview": {
+          "description": "Free. Provider A is degraded; TensorFeed's signed ruling on the single best operational provider to fail over to for a task right now. Confirms A against the live incident-triage feed, then runs the route-verdict fusion with A (and any provider already in failover) excluded. For the full failover candidate (pricing, measured latency, quality), the ranked alternatives, and an AFTA-signed receipt, use failover_verdict. Requires from. 10 calls per day per IP.",
+          "enable": false
+        },
+        "failover_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed failover ruling: provider A is degraded, this is the best operational provider to fail over to for a task right now, with the full candidate (pricing, measured p95 latency, quality), the ranked alternatives, the confirmed incident on A, and an AFTA-signed receipt. Versus the free failover_verdict_preview it adds the candidate's pricing, measured latency, and quality, the ranked alternatives, and the receipt, with no rate limit. Confirms A against live incident triage and excludes any provider already in failover. 30-minute operational freshness SLA. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "ssvc_verdict_preview": {
+          "description": "Free. The CISA SSVC decision points for one CVE, read from CISA's Vulnrichment record: exploitation, automatable, and technical impact, plus the decision-tree provenance, WITHOUT the computed Act / Attend / Track / Track* decision (that is the premium ruling). For the computed SSVC decision across the full Mission and Well-being envelope, the per-level reasoning, the live KEV cross-check, and an AFTA-signed receipt, use ssvc_verdict. Requires a CVE id. 10 calls per day per IP.",
+          "enable": false
+        },
+        "ssvc_verdict": {
+          "description": "Costs 1 credit ($0.02). The signed SSVC patch-urgency decision for one CVE: applies the CISA SSVC Coordinator decision tree to the three recorded decision points and returns the decision (Act, Attend, Track, or Track*) across the full low/medium/high Mission and Well-being envelope, the per-level reasoning, a live CISA KEV cross-check, and an AFTA-signed receipt. Versus the free ssvc_verdict_preview it adds the computed decision, the envelope, the reasoning trace, the KEV staleness overlay, and the receipt, with no rate limit. A CVE not in Vulnrichment is no-charge. Get credits at tensorfeed.ai/developers/agent-payments. Strict premium, no free trial.",
+          "enable": false
+        },
+        "pricing_series_free": {
+          "description": "Daily price points for one AI model over the last 1 to 7 days, free. For windows up to 90 days use pricing_series (1 credit).",
+          "enable": false
+        },
+        "benchmark_series_free": {
+          "description": "Daily benchmark scores for one model+benchmark over the last 1 to 7 days, free. Benchmark keys: swe_bench, mmlu_pro, gpqa_diamond, math, human_eval. For windows up to 90 days use benchmark_series (1 credit).",
+          "enable": false
+        },
+        "status_uptime_free": {
+          "description": "Daily uptime rollup for one provider over the last 1 to 7 days, free. For windows up to 90 days use status_uptime (1 credit).",
+          "enable": false
+        },
+        "status_leaderboard_free": {
+          "description": "Cross-provider uptime leaderboard, ranked by uptime % DESC. Free, 7-day cap. Computed from minute-resolution counters (~720 samples per provider per day). For 90-day windows plus incident_count and mttr_minutes per provider use status_leaderboard (1 credit).",
+          "enable": true
+        },
+        "pricing_series": {
+          "description": "Daily price points for one AI model with min/max/delta summary. Default range = last 30 days, max 90 days. Costs 1 credit ($0.02). Strict premium, no free trial; the 7-day-capped sibling pricing_series_free is the discovery option.",
+          "enable": false
+        },
+        "benchmark_series": {
+          "description": "Score evolution for a single benchmark on one AI model. Costs 1 credit ($0.02). Strict premium, no free trial; the 7-day-capped sibling benchmark_series_free is the discovery option. Benchmark keys: swe_bench, mmlu_pro, gpqa_diamond, math, human_eval.",
+          "enable": false
+        },
+        "status_uptime": {
+          "description": "Daily uptime rollup for one provider with operational/degraded/down day counts and uptime % (degraded counts as half-credit). Costs 1 credit ($0.02). Strict premium, no free trial; the 7-day-capped sibling status_uptime_free is the discovery option.",
+          "enable": false
+        },
+        "status_leaderboard": {
+          "description": "Cross-provider uptime leaderboard for a custom date range up to 90 days. Same minute-resolution counter source as status_leaderboard_free, but adds incident_count and mttr_minutes (mean time to recover) per provider. Sorted by uptime % DESC. Costs 3 credits ($0.06). Strict premium, no free trial; the 7-day-capped sibling status_leaderboard_free is the discovery option.",
+          "enable": false
+        },
+        "premium_agents_directory": {
+          "description": "Enriched AI agents catalog joined with live status, recent news, agent traffic, flagship pricing, and a 0-100 trending_score. Costs 1 credit ($0.02).",
+          "enable": false
+        },
+        "whats_new": {
+          "description": "Agent morning brief: pricing changes, new/removed models, status incidents, and top news from the last 1-7 days. The tool to call when your agent boots up. Costs 1 credit ($0.02).",
+          "enable": false
+        },
+        "compare_models": {
+          "description": "Side-by-side comparison of 2-5 AI models. Returns pricing, benchmarks (normalized to a union of keys with null for missing scores), provider status, and recent news per model, plus rankings (cheapest blended, most context, per-benchmark leaderboard). Costs 1 credit ($0.02).",
+          "enable": false
+        },
+        "provider_deepdive": {
+          "description": "Everything about an AI provider in one call: live status, all models with pricing + tier + benchmark scores joined in, recent news mentions, and agent traffic. Costs 3 credits ($0.06). Strict premium, no free trial. Aggregation IS the value; doing this from free endpoints would take 4 round-trips.",
+          "enable": false
+        },
+        "cost_projection": {
+          "description": "Project the cost of a token-usage workload across 1-10 AI models. Returns daily/weekly/monthly/yearly totals per model and a ranking by cheapest monthly. Costs 1 credit ($0.02).",
+          "enable": false
+        },
+        "news_search": {
+          "description": "Full-text search over the TensorFeed news article corpus with optional date range, provider, and category filters. Relevance scoring with recency boost. Costs 1 credit ($0.02).",
+          "enable": false
+        },
+        "list_watches": {
+          "description": "List the active webhook watches owned by the configured TensorFeed token. Free, requires TENSORFEED_TOKEN.",
+          "enable": false
+        },
+        "create_price_watch": {
+          "description": "Register a webhook watch on a model price change. Costs 1 credit ($0.02). Watch lives 90 days. Each fire is an HMAC-signed POST to callback_url.",
+          "enable": false
+        },
+        "create_status_watch": {
+          "description": "Register a webhook watch on a service status transition (e.g. anthropic becomes down). Costs 1 credit ($0.02). Watch lives 90 days.",
+          "enable": false
+        },
+        "create_digest_watch": {
+          "description": "Register a scheduled digest webhook that fires daily or weekly with a curated summary of pricing changes (regardless of whether anything dramatic happened). Costs 1 credit ($0.02). Watch lives 90 days. Set-and-forget for agents that want a periodic snapshot without subscribing to realtime transitions.",
+          "enable": false
+        },
+        "create_leaderboard_rank_watch": {
+          "description": "Register a webhook that fires when a provider crosses a rank threshold on the cross-provider 7-day uptime leaderboard. Rank 1 = best (highest uptime). drops_below: was rank<=N, now rank>N (got worse). rises_above: was rank>=N, now rank<N (got better). changes: any rank movement. Costs 1 credit ($0.02) at registration. Watch lives 90 days.",
+          "enable": false
+        },
+        "delete_watch": {
+          "description": "Delete one of your active webhook watches by id. Free, requires TENSORFEED_TOKEN.",
+          "enable": false
+        },
+        "probe_latest": {
+          "description": "Last 24 hours of measured LLM endpoint latency and availability per provider (Anthropic, OpenAI, Google, Mistral, Cohere). TensorFeed pings each provider's chat completion endpoint every 15 min and records time-to-first-byte, total response time, and HTTP status. Returns per-provider success rate and ttfb/total p50/p95/p99 latency. The data is unique because we measure it ourselves, not self-reported by the providers. Useful when an agent needs to pick a provider whose SLA you can verify, or to detect ongoing incidents before they hit a status page. Free, no auth.",
+          "enable": true
+        },
+        "probe_series": {
+          "description": "Daily SLA series for one LLM provider, measured by TensorFeed. Returns per-day count, success rate, ttfb p50/p95/p99, total p50/p95/p99, and incident-hour count across the requested window. Provider status pages are politically managed; this is the measured truth. Pairs naturally with premium_routing for picking a model whose SLA you can verify. Costs 3 credits ($0.06). Strict premium, no free trial.",
+          "enable": false
+        },
+        "mcp_registry_snapshot": {
+          "description": "Today's summary of the official Model Context Protocol server registry. Returns total servers, by-status breakdown, top namespaces, and 1-day deltas (newly added, reactivated, deprecated). Captured daily at 9:30 AM UTC from registry.modelcontextprotocol.io. Useful when an agent wants to see how the MCP ecosystem is growing or detect freshly-deprecated servers it may be using. Free, no auth.",
+          "enable": true
+        },
+        "get_ai_papers_trending": {
+          "description": "Daily curated AI/ML research papers ranked by citation count. Sourced from Semantic Scholar across five fan-out queries (large language model, transformer, RLHF, AI agents, diffusion model), deduped by paperId, top 30 returned. Each paper carries title, abstract, authors, year, venue, citation count, arxivId, doi, and fields of study. Refreshed daily at 11:00 UTC. Use this when an agent wants the citation-ranked top of the AI research literature. Free, no auth.",
+          "enable": true
+        },
+        "get_arxiv_recent": {
+          "description": "Most recent arXiv submissions in cs.AI / cs.LG / cs.CL / cs.CV. Single Atom API call, deduped by arxivId, top 50 by submission date. The firehose pair to get_ai_papers_trending: this shows what just dropped, ai_papers_trending ranks by citation count. Each paper carries arxivId, title, abstract, authors, primary category, publication date, html and pdf URLs. Refreshed daily at 11:30 UTC. Free, no auth.",
+          "enable": true
+        },
+        "get_hf_trending": {
+          "description": "Top Hugging Face models, datasets, and Spaces. Models + datasets ranked by downloads (top 30 each); Spaces ranked by likes (top 30, since downloads is meaningless for hosted apps). Captured daily at 12:00 UTC against the public HF API (no auth). Each model entry carries id, downloads, likes, pipeline_tag, tags, lastModified, private, gated. Each space entry carries id, author, sdk (gradio/streamlit/static/docker), likes, tags, lastModified, private, runtime_stage, hardware. Use this when an agent wants the current shape of the open model + dataset + app ecosystem. Once enough daily snapshots accumulate, day-over-day deltas become a real trending signal. Free, no auth.",
+          "enable": true
+        },
+        "get_hot_issues": {
+          "description": "Currently-hot GitHub issues across the AI ecosystem. Five fan-out keyword-phrase searches (\"large language model\", \"AI agent\", transformer, \"machine learning\", LLM) for is:issue is:open archived:false comments>=10 updated within the last 7 days. Deduped by URL, top 30 by comment count. Each issue carries url, repo, number, title, author, state, comments, reactions_total, labels, created_at, updated_at, and matched_topic (the keyword phrase that found it). Refreshed daily at 12:30 UTC. Companion to get_trending_repos: that shows which AI repos are gaining stars, this shows where the active conversations are. Free, no auth.",
+          "enable": true
+        },
+        "get_reddit_trending": {
+          "description": "Currently-hot threads in 7 AI-relevant subreddits (LocalLLaMA, MachineLearning, ClaudeAI, OpenAI, singularity, artificial, AI_Agents). Stickied and NSFW posts filtered, deduped by post id, ranked by score, top 30. Each post carries id, subreddit, title, author, score, upvote_ratio, num_comments, permalink, url, created_utc, flair, is_self, is_video. Refreshed daily at 13:00 UTC. Companion to get_hot_issues: that surfaces developer conversation on GitHub, this surfaces community conversation on Reddit. Titles are sanitized at capture time against prompt-injection tokens. Free, no auth.",
+          "enable": true
+        },
+        "get_openrouter_models": {
+          "description": "OpenRouter cross-provider model catalog (200+ models normalized across 50+ inference providers). Each entry has per-token pricing (prompt + completion + image + request), context window, modality (e.g. text+image->text), instruct_type, tokenizer, top provider metadata (max_completion_tokens, moderation flag), and supported_parameters. Use this to find the long tail of OSS models on cloud inference, including the cheapest model for a given workload, the model with the largest context window, or the free-tier set. Pairs with get_model_pricing (curated frontier-lab catalog). Refreshed daily at 14:00 UTC. Free, no auth.",
+          "enable": true
+        },
+        "get_hf_daily_papers": {
+          "description": "Hugging Face Daily Papers: editor-curated AI/ML papers from huggingface.co/papers, layered with community upvotes and discussion counts. Different signal from get_arxiv_recent (firehose) and get_ai_papers_trending (citation-ranked all-time): this is editor picks of-the-day with engagement signal. Each paper carries paperId, title, summary, authors, upvotes, num_comments, hf_url, arxiv_url (when applicable), github_repo, github_stars, ai_keywords. Refreshed daily at 14:15 UTC. Titles sanitized at capture time. Free, no auth.",
+          "enable": true
+        },
+        "get_recent_earthquakes": {
+          "description": "Recent earthquakes from the USGS Earthquake Hazards Program pre-built summary feeds. Choose a magnitude bucket (significant | 4.5 | 2.5 | 1.0 | all) and a time window (hour | day | week | month). Returns id, magnitude, place, time (ISO 8601), depth_km, longitude, latitude, tsunami flag, USGS detail URL. Upstream feeds refresh every minute. License: US Government public domain (17 USC 搂105). Free, no auth.",
+          "enable": true
+        },
+        "get_weather_alerts": {
+          "description": "Active US weather alerts from the National Weather Service. US-only. Filter by 2-letter state code (area), exact NWS event name, severity, urgency, status. Returns id, event, severity, urgency, headline, description, areaDesc, sent/effective/expires/ends, sender_name, web URL. Active alerts only. Expired alerts fall off the upstream feed automatically. License: US Government public domain. Free, no auth.",
+          "enable": true
+        },
+        "get_agent_opportunities": {
+          "description": "TensorFeed's daily scan of new repositories across the AI agent ecosystem (Anthropic, OpenAI, Microsoft, ModelContextProtocol, HuggingFace, LangChain, frontier-lab orgs) plus recent MCP, x402, and skill keyword sweeps. Eleven signals total, deduped + composite-scored (signal_weight 脳 log10(stars+1) 脳 recency decay) with per-signal MIN/MAX caps so smaller signals are never starved. Refreshed daily at 13:30 UTC. Useful for surfacing distribution targets, integration ideas, or a daily brief on what's launching across the agent space. Free, no auth.",
+          "enable": true
+        },
+        "get_ai_ecosystem_today": {
+          "description": "One-shot composite AI morning brief. Calls /api/today which fans out across all daily TensorFeed feeds (news, 3 paper feeds, HF models/datasets/Spaces, hot GitHub issues, Reddit threads, OpenRouter catalog summary, provider status) and returns a single synthesized text response. Optional sections filter (any subset of news, papers, hf, community, inference, status) and limit_per_section (1-10, default 3). Captured-at timestamps from each underlying snapshot are surfaced so the agent knows recency. Free, no auth.",
+          "enable": true
+        },
+        "get_ai_cves_latest": {
+          "description": "Get metadata for the most-recent AI-stack CVE batch plus the first 25 papers. Source: TensorFeed AI-CVE intelligence feed, derived from GitHub Security Advisories (CC BY 4.0). Each paper carries cve_ids, affected_products, affected_version_ranges, fixed_versions, exploited_in_wild, severity_label, and source_url. For the full set use get_ai_cves_feed with offset; for AI-stack-filtered + categorized + sorted papers use the paid /api/premium/ai-cves/* endpoints. Free, no auth.",
+          "enable": false
+        },
+        "get_ai_cves_feed": {
+          "description": "Get a paginated slice of the most-recent AI-stack CVE batch. limit is capped at 50 (the premium tier handles bulk). Source: TensorFeed AI-CVE feed, derived from GitHub Security Advisories (CC BY 4.0). Free, no auth.",
+          "enable": false
+        },
+        "get_ai_cves_stats": {
+          "description": "Get aggregate counts across the most-recent AI-stack CVE batch: distribution by severity (critical/high/medium/low/unstated), distribution by exploitation status (stated_yes/stated_no/unstated), and top 10 vendors by frequency. Source: TensorFeed AI-CVE feed (GitHub Security Advisories, CC BY 4.0). Free, no auth.",
+          "enable": false
+        },
+        "get_ai_company_filings": {
+          "description": "Get recent SEC filings (10-K, 10-Q, 8-K, etc.) for one AI bellwether ticker. Cohort: NVDA, AMD, AVGO, TSM, ARM, MSFT, GOOGL, AMZN, ORCL, PLTR, SMCI, AAPL, META, TSLA. Source: data.sec.gov, public domain. Refreshed every 6 hours. Free, no auth.",
+          "enable": false
+        },
+        "premium_ai_company": {
+          "description": "Get the per-ticker AI intelligence envelope for one AI bellwether: latest 10 SEC filings, latest 10 AI-tagged news mentions filtered by curated aliases, strategic and equity funding rounds where the company is a lead or notable investor, and cohort metadata. One call replaces four free siblings (sec/filings, news, funding, cohort) plus the agent-side alias filter. Costs 1 credit ($0.02). Strict-premium; ticker must be in the cohort.",
+          "enable": false
+        },
+        "get_x402_summary": {
+          "description": "Get ecosystem-level x402 USDC settlement rollup on Base mainnet. Returns volume_usdc, count, unique_publishers, and change_vs_prior_window across a 24h, 7d, or 30d window. TensorFeed indexes Base USDC Transfer events filtered to wallets self-published by x402-compliant publishers in their /.well-known/x402.json manifests. Forward-only from 2026-05-28; ~6 min worst-case freshness (10 min SLA). Free, capped to one window per call.",
+          "enable": false
+        },
+        "get_x402_publishers": {
+          "description": "List x402-compliant publishers TensorFeed currently indexes. Each entry: domain, pay_to_wallets, first_seen, last_crawled, last_event_at, last_crawl_error. Publishers are auto-discovered daily via /.well-known/x402.json crawls. Use this to enumerate which publishers can then be queried in depth via premium_x402_publisher_receipts. Free, no input.",
+          "enable": false
+        },
+        "get_x402_leaderboard": {
+          "description": "Top publishers by x402 USDC settlement volume across a 24h, 7d, or 30d window. Each leader: rank, domain, volume_usdc, count, share_pct of the sliced total. Limit clamped 1 to 25. Useful for surfacing which x402 services are receiving the most agent traffic. Free.",
+          "enable": false
+        },
+        "get_x402_recent": {
+          "description": "Most recent x402 USDC settlement events newest-first. Each event: tx_hash, block, ts, from_address, to_address, amount_usdc, publisher_domain, base_explorer_url (basescan.org link). Backed by a 100-event ring buffer updated on every indexer cron tick. Limit clamped 1 to 50, default 20. Free.",
+          "enable": false
+        },
+        "premium_x402_publisher_receipts": {
+          "description": "Per-publisher receipt feed for one x402-compliant domain across a from/to date range. Returns publisher meta (domain, pay_to_wallets, first_seen), window rollup (volume_usdc, count, avg_amount, daily_series), and attribution. \n\nVS FREE: get_x402_publishers tells you WHICH publishers exist but only with rolled-up scalar counters. This endpoint composes the per-day rollup across a date range with avg_amount, daily series for charts, and structured attribution license metadata in one paid call. An agent building a per-publisher analytics dashboard would otherwise need to call get_x402_publishers + reconstruct daily series from get_x402_summary per-day (impossible because /summary returns ecosystem totals not per-publisher) or wait for the next free-tier expansion. The premium endpoint saves the integration overhead and serves a forensic / compliance-grade payload for $0.02. \n\nForward-only index. Costs 1 credit ($0.02). Strict-premium; domain must exist in get_x402_publishers, otherwise 404.",
+          "enable": false
+        },
+        "premium_x402_series": {
+          "description": "Time-series of ecosystem or per-publisher x402 settlement volume or count across a from/to date range, chart-feeding. Required: metric (volume or count), granularity (day or hour), from + to (YYYY-MM-DD). Optional: domain filter (omit for ecosystem). \n\nVS FREE: get_x402_summary returns one rolled-up scalar per call for a fixed window length (24h / 7d / 30d). For ANY chart or dashboard, the caller needs a series, not a scalar. The premium endpoint returns the full series in one call instead of N calls + N rate-limit budget burns. For a publisher-scoped series, it is the ONLY way to get per-publisher daily data (get_x402_summary is ecosystem-only). \n\nMVP supports granularity=day; hour returns an empty series with an attribution note (hourly rollups land in a future indexer version). Costs 1 credit ($0.02).",
+          "enable": false
+        }
+      }
+    },
+    "calculator": {
+      "tools": {
+        "calculator": {
+          "description": "鐢ㄤ簬鏁板璁＄畻锛岃绠?JavaScript 琛ㄨ揪寮忕殑缁撴灉",
+          "enable": true
+        }
+      }
+    }
+  }
+}
