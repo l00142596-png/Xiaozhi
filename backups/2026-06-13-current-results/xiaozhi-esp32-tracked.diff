@@ -14,7 +14,7 @@ index b324e22..f64c547 100644
                          esp_psram
                          esp_netif
 diff --git a/main/application.cc b/main/application.cc
-index d54ac6b..1e5f534 100644
+index d54ac6b..73ae9ff 100644
 --- a/main/application.cc
 +++ b/main/application.cc
 @@ -231,6 +231,7 @@ void Application::Run() {
@@ -101,7 +101,13 @@ index d54ac6b..1e5f534 100644
              Schedule([this]() {
                  ContinueOpenAudioChannel(kListeningModeManualStop);
              });
-@@ -792,8 +813,6 @@ void Application::HandleWakeWordDetectedEvent() {
+@@ -787,13 +808,12 @@ void Application::HandleWakeWordDetectedEvent() {
+     ESP_LOGI(TAG, "Wake word detected: %s (state: %d)", wake_word.c_str(), (int)state);
+ 
+     if (state == kDeviceStateIdle) {
++        aborted_ = false;
+         audio_service_.EncodeWakeWord();
+         auto wake_word = audio_service_.GetLastWakeWord();
  
          if (!protocol_->IsAudioChannelOpened()) {
              SetDeviceState(kDeviceStateConnecting);
@@ -110,15 +116,23 @@ index d54ac6b..1e5f534 100644
              Schedule([this, wake_word]() {
                  ContinueWakeWordInvoke(wake_word);
              });
-@@ -826,6 +845,7 @@ void Application::HandleWakeWordDetectedEvent() {
+@@ -825,22 +845,37 @@ void Application::HandleWakeWordDetectedEvent() {
+ 
  void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
      // Check state again in case it was changed during scheduling
-     if (GetDeviceState() != kDeviceStateConnecting) {
-+        ESP_LOGW(TAG, "Skip wake word invoke, state changed to %d", (int)GetDeviceState());
+-    if (GetDeviceState() != kDeviceStateConnecting) {
++    auto state = GetDeviceState();
++    bool can_invoke = state == kDeviceStateConnecting ||
++        (state == kDeviceStateIdle && protocol_ != nullptr && protocol_->IsAudioChannelOpened());
++    if (!can_invoke) {
++        ESP_LOGW(TAG, "Skip wake word invoke, state changed to %d, channel_open=%d",
++                 (int)state, protocol_ != nullptr && protocol_->IsAudioChannelOpened());
          return;
      }
++    aborted_ = false;
  
-@@ -834,13 +854,22 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
+     // Switch to performance mode before connecting to reduce latency
+     auto& board = Board::GetInstance();
      board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
  
      if (!protocol_->IsAudioChannelOpened()) {
@@ -142,7 +156,7 @@ index d54ac6b..1e5f534 100644
  #if CONFIG_SEND_WAKE_WORD_DATA
      // Encode and send the wake word data to the server
      while (auto packet = audio_service_.PopWakeWordPacket()) {
-@@ -860,6 +889,7 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
+@@ -860,6 +895,7 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
  void Application::HandleStateChangedEvent() {
      DeviceState new_state = state_machine_.GetState();
      clock_ticks_ = 0;
@@ -150,7 +164,7 @@ index d54ac6b..1e5f534 100644
  
      auto& board = Board::GetInstance();
      auto display = board.GetDisplay();
-@@ -883,6 +913,10 @@ void Application::HandleStateChangedEvent() {
+@@ -883,6 +919,10 @@ void Application::HandleStateChangedEvent() {
          case kDeviceStateListening:
              display->SetStatus(Lang::Strings::LISTENING);
              display->SetEmotion("neutral");
@@ -161,7 +175,7 @@ index d54ac6b..1e5f534 100644
  
              // Make sure the audio processor is running
              if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {
-@@ -940,11 +974,20 @@ void Application::Schedule(std::function<void()>&& callback) {
+@@ -940,11 +980,23 @@ void Application::Schedule(std::function<void()>&& callback) {
  }
  
  void Application::AbortSpeaking(AbortReason reason) {
@@ -176,6 +190,9 @@ index d54ac6b..1e5f534 100644
 +        return;
 +    }
 +    if (GetDeviceState() == kDeviceStateSpeaking || GetDeviceState() == kDeviceStateListening) {
++        if (protocol_ && protocol_->IsAudioChannelOpened()) {
++            protocol_->CloseAudioChannel();
++        }
 +        SetDeviceState(kDeviceStateIdle);
 +        audio_service_.EnableVoiceProcessing(false);
 +        audio_service_.EnableWakeWordDetection(true);
@@ -218,7 +235,7 @@ index 2f915f8..6d59a00 100644
          }
      ]
 diff --git a/main/boards/m5stack-tab5/m5stack_tab5.cc b/main/boards/m5stack-tab5/m5stack_tab5.cc
-index 43ed5b5..12b42b0 100644
+index 43ed5b5..eaf6fb7 100644
 --- a/main/boards/m5stack-tab5/m5stack_tab5.cc
 +++ b/main/boards/m5stack-tab5/m5stack_tab5.cc
 @@ -10,6 +10,7 @@
@@ -376,7 +393,7 @@ index 43ed5b5..12b42b0 100644
          InitializeCamera();
          InitializeButtons();
          SetChargeQcEn(true);
-@@ -519,6 +634,56 @@ public:
+@@ -519,6 +634,67 @@ public:
          return &backlight;
      }
  
@@ -393,24 +410,35 @@ index 43ed5b5..12b42b0 100644
 +            charging = false;
 +            discharging = false;
 +            ESP_LOGW(TAG, "Battery: invalid INA226 bus voltage %dmV", mv);
-+            return true;
++            return false;
 +        }
 +        if (mv < 5000 || mv > 9000) {
 +            level = 0;
 +            charging = false;
 +            discharging = false;
-+            return true;
++            return false;
 +        }
 +        int shunt_uv = ina226_->ReadShuntVoltageUv();
 +        // Tab5 INA226: shunt V+ on battery side, V- on charger/load side
 +        // Positive shunt = current OUT of battery = DISCHARGING
 +        // Negative shunt = current INTO battery = CHARGING
-+        const int kBatteryCurrentPresentUv = 1000;  // ~200mA with Tab5 5mOhm shunt
-+        discharging = (shunt_uv > kBatteryCurrentPresentUv);
-+        charging = (shunt_uv < -kBatteryCurrentPresentUv);
-+        if (!charging && !discharging && mv >= 6000 && mv <= 8600) {
++        const int kBatteryCurrentPresentUv = 1500;  // ~300mA with Tab5 5mOhm shunt
++        static int battery_present_score = 0;
++        bool current_present = std::abs(shunt_uv) >= kBatteryCurrentPresentUv;
++        if (current_present) {
++            if (battery_present_score < 5) {
++                battery_present_score++;
++            }
++        } else if (battery_present_score > 0) {
++            battery_present_score--;
++        }
++
++        discharging = (shunt_uv > kBatteryCurrentPresentUv) && battery_present_score >= 3;
++        charging = (shunt_uv < -kBatteryCurrentPresentUv) && battery_present_score >= 3;
++        if (battery_present_score < 3) {
 +            level = 0;
-+            ESP_LOGI(TAG, "Battery: no battery current detected (%dmV shunt=%duV), hide battery icon", mv, shunt_uv);
++            ESP_LOGI(TAG, "Battery: not stable/present yet (%dmV shunt=%duV score=%d), hide battery icon",
++                     mv, shunt_uv, battery_present_score);
 +            return false;
 +        }
 +        if (mv < 6000) {
@@ -433,7 +461,7 @@ index 43ed5b5..12b42b0 100644
      // BSP power control functions
      void SetChargeQcEn(bool en) {
          if (pi4ioe2_) {
-@@ -571,4 +736,3 @@ public:
+@@ -571,4 +747,3 @@ public:
  
  
  DECLARE_BOARD(M5StackTab5Board);
@@ -743,7 +771,7 @@ index e5be55e..360554d 100644
      virtual void SetChatMessage(const char* role, const char* content) override;
      virtual void ClearChatMessages() override;
 diff --git a/main/display/lvgl_display/lvgl_display.cc b/main/display/lvgl_display/lvgl_display.cc
-index 46668dd..b36beb7 100644
+index 46668dd..4408818 100644
 --- a/main/display/lvgl_display/lvgl_display.cc
 +++ b/main/display/lvgl_display/lvgl_display.cc
 @@ -13,6 +13,8 @@
@@ -755,7 +783,7 @@ index 46668dd..b36beb7 100644
  #define TAG "Display"
  
  LvglDisplay::LvglDisplay() {
-@@ -115,21 +117,33 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+@@ -115,21 +117,37 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
      auto& board = Board::GetInstance();
      auto codec = board.GetAudioCodec();
  
@@ -779,8 +807,11 @@ index 46668dd..b36beb7 100644
              muted_ = false;
              lv_label_set_text(mute_label_, "");
          }
-+        // Volume percentage text (only when unmuted and changed)
 +        if (volume_label_ != nullptr) {
++#if CONFIG_BOARD_TYPE_M5STACK_CORE_TAB5
++            lv_label_set_text(volume_label_, "");
++#else
++            // Volume percentage text (only when unmuted and changed)
 +            if (vol > 0 && vol != last_volume_) {
 +                last_volume_ = vol;
 +                char buf[16];
@@ -789,11 +820,12 @@ index 46668dd..b36beb7 100644
 +            } else if (vol == 0) {
 +                lv_label_set_text(volume_label_, "");
 +            }
++#endif
 +        }
      }
  
      // Update time
-@@ -155,6 +169,8 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+@@ -155,6 +173,8 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
      bool charging, discharging;
      const char* icon = nullptr;
      if (board.GetBatteryLevel(battery_level, charging, discharging)) {
@@ -802,7 +834,7 @@ index 46668dd..b36beb7 100644
          if (charging) {
              icon = FONT_AWESOME_BATTERY_BOLT;
          } else {
-@@ -191,6 +207,15 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+@@ -191,6 +211,15 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
                  }
              }
          }
@@ -818,7 +850,7 @@ index 46668dd..b36beb7 100644
      }
  
      // Update network icon every 10 seconds
-@@ -213,6 +238,21 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
+@@ -213,6 +242,21 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
                  lv_label_set_text(network_label_, network_icon_);
              }
          }
