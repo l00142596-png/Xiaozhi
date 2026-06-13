@@ -1,0 +1,98 @@
+{
+  "mcpEndpoint": "wss://api.xiaozhi.me/mcp/?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjk2NDMzOSwiYWdlbnRJZCI6MjAwMjYzMCwiZW5kcG9pbnRJZCI6ImFnZW50XzIwMDI2MzAiLCJwdXJwb3NlIjoibWNwLWVuZHBvaW50IiwiaWF0IjoxNzgwODQxMTkwLCJleHAiOjE4MTIzOTg3OTB9.B6llxGBeuLDTTtWpBHmViRDFtBPnT3cm8ev0hy5Vg61wExTQQpnEuXOHoNkGnjZjztKk_m7vf9Std2r152V5mA",
+  "mcpServers": {
+    "knowledge": {
+      "type": "sse",
+      "url": "http://127.0.0.1:8766/sse"
+    },
+    "calculator": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@xiaozhi-client/calculator-mcp"
+      ]
+    },
+    "datetime": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@xiaozhi-client/datetime-mcp"
+      ]
+    }
+  },
+  "asr": {
+    "model": "doubao",
+    "appid": "",
+    "accessToken": ""
+  },
+  "llm": {
+    "prompt": "./prompts/default.md",
+    "model": "",
+    "apiKey": "",
+    "baseURL": ""
+  },
+  "tts": {
+    "model": "doubao",
+    "appid": "",
+    "accessToken": "",
+    "voice_type": "zh_female_xiaohe_uranus_bigtts"
+  },
+  "connection": {
+    "heartbeatInterval": 30000,
+    "heartbeatTimeout": 10000,
+    "reconnectInterval": 5000
+  },
+  "webUI": {
+    "port": 9999
+  },
+  "mcpServerConfig": {
+    "knowledge": {
+      "tools": {
+        "save_knowledge": {
+          "description": "???????????????????????????????????",
+          "enable": true
+        },
+        "search_knowledge": {
+          "description": "?????????????????????????????????????",
+          "enable": true
+        },
+        "list_all_knowledge": {
+          "description": "????????????????????????????",
+          "enable": true
+        },
+        "search_regulation": {
+          "description": "RAG ?????????????????????????????????????",
+          "enable": true
+        }
+      }
+    },
+    "datetime": {
+      "tools": {
+        "get_current_time": {
+          "description": "获取当前时间，支持多种格式",
+          "enable": true
+        },
+        "get_current_date": {
+          "description": "获取当前日期，支持多种格式",
+          "enable": true
+        },
+        "format_datetime": {
+          "description": "将给定的日期时间字符串或时间戳格式化为指定格式",
+          "enable": true
+        },
+        "add_time": {
+          "description": "在给定的日期时间基础上增加或减少时间",
+          "enable": true
+        }
+      }
+    },
+    "calculator": {
+      "tools": {
+        "calculator": {
+          "description": "用于数学计算，计算 JavaScript 表达式的结果",
+          "enable": true
+        }
+      }
+    }
+  }
+}
