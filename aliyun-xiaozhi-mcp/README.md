@@ -6,38 +6,24 @@ Runtime paths:
 - Mixed RAG backup on server: `/opt/xiaozhi-mcp/backups/rag_mixed_20260614_155202`
 - Full strict candidate RAG: `/opt/xiaozhi-mcp/rag_strict`
 - Active approved strict RAG: `/opt/xiaozhi-mcp/rag_strict_active`
-- Rejected/manual-hold files: `/opt/xiaozhi-mcp/rejected_sources`
 - Active service: `xiaozhi-kb.service`
 - Client bridge: `xiaozhi-client.service`
+
+Current active strict RAG:
+- Sources: 36
+- Chunks: 15637
+- `TG GD 115-2017 普速铁路接触网安全工作规则.pdf` is approved and included with 41 OCR chunks.
 
 Strict behavior:
 - `search_regulation` reads `rag_strict_active` by default.
 - Only sources marked `approved` in `source_registry_active.json` are loaded into the active RAG.
 - Duplicate, incomplete, rejected, or reference-only sources stay outside the active RAG.
 - If the user explicitly names a disabled source/document number, the tool refuses to answer from similar files.
+- If the user explicitly names an approved source/document number/title, the tool restricts search to that source.
 - Low confidence results are refused with “未检索到足够可靠的标准规范依据”.
 - Returned results include source file, authority level, priority, issuer, document number, year, page/article hint, similarity, keyword coverage, railway scope, and discipline.
 - Domain-aware ranking keeps explicit sub-domain queries inside the right norm family where possible.
-- The answer policy requires citation and forbids unsupported additions.
-
-PuSu railway taxonomy examples:
-- 普速铁路 / 技术管理规程
-- 普速铁路 / 线路修理
-- 普速铁路 / 桥隧建筑物
-- 普速铁路 / 工务安全
-- 营业线施工 / 施工管理/通知办法
-- 供电专业 / 接触网
-- 电务专业 / 信号/电务
-
-Governance files:
-- `source_registry_all.json`: all strict-candidate sources with status, metadata, railway scope, and discipline.
-- `source_registry_active.json`: approved sources currently loaded by the service.
-- `source_overrides.json`: manual decisions that must survive registry regeneration.
-- `source_review_todo.txt`: metadata gaps and disabled-source reasons.
-- `scripts/build_source_registry.py`: regenerates the registry from `rag_strict` and applies overrides.
-- `scripts/build_active_strict_rag.py`: regenerates `rag_strict_active` from approved sources.
 
 Important:
 - Do not commit real API keys or Xiaozhi endpoint tokens. Use `/etc/xiaozhi-mcp.env` on the server.
 - Reference materials such as textbooks, Q&A books, and work guides remain in the mixed backup, not the default strict RAG.
-- `TG GD 115-2017 普速铁路接触网安全工作规则.pdf` is explicitly disabled because the user confirmed it is not the same required norm. Provide the correct complete file before enabling it.

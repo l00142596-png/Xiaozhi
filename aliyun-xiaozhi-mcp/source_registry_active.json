@@ -34,6 +34,23 @@
     "review_notes": []
   },
   {
+    "filename": "TG GD 115-2017 普速铁路接触网安全工作规则.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 41,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "railway_scope": "供电专业",
+    "discipline": "接触网",
+    "document_type": "technical_rule",
+    "issuer": "铁路行业技术规章发布单位待核",
+    "document_no": "TG GD 115-2017",
+    "effective_year": 2017,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
     "filename": "TG GD 116-2017 普速铁路接触网运行维修规则（铁总运[2017]9号）.pdf",
     "status": "approved",
     "disabled_reason": "",

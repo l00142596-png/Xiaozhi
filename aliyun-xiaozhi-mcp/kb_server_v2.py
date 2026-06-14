@@ -169,6 +169,16 @@ def _normalize_identifier(text: str) -> str:
     return re.sub(r"[^0-9a-z\u4e00-\u9fff]+", "", text)
 
 
+def _source_title_candidate(filename: str, document_no: str = "") -> str:
+    """Get a human title from a source filename for exact title matching."""
+    title = re.sub(r"\.(pdf|docx)$", "", filename, flags=re.IGNORECASE).strip()
+    if document_no:
+        title = title.replace(document_no, "")
+    title = re.sub(r"^(TG\s*[A-Z]{1,3}\s*\d+[A-Z]?[-－]\d{4}|TGGW\s*\d+[A-Z]?[-－]\d{4})", "", title, flags=re.IGNORECASE)
+    title = re.sub(r"^[\s_\-－—]+", "", title).strip()
+    return title
+
+
 def _disabled_source_match(query: str) -> dict | None:
     qn = _normalize_identifier(query)
     if not qn:
@@ -176,7 +186,31 @@ def _disabled_source_match(query: str) -> dict | None:
     for item in _load_all_source_registry().values():
         if item.get("status") == "approved":
             continue
-        candidates = [item.get("filename", ""), item.get("document_no", "")]
+        candidates = [
+            item.get("filename", ""),
+            item.get("document_no", ""),
+            _source_title_candidate(item.get("filename", ""), item.get("document_no", "")),
+        ]
+        for candidate in candidates:
+            cn = _normalize_identifier(candidate)
+            if cn and (cn in qn or qn in cn):
+                return item
+    return None
+
+
+def _approved_source_match(query: str) -> dict | None:
+    """If the user names an approved source/document, restrict search to it."""
+    qn = _normalize_identifier(query)
+    if not qn:
+        return None
+    for item in _load_source_registry().values():
+        if item.get("status") != "approved":
+            continue
+        candidates = [
+            item.get("filename", ""),
+            item.get("document_no", ""),
+            _source_title_candidate(item.get("filename", ""), item.get("document_no", "")),
+        ]
         for candidate in candidates:
             cn = _normalize_identifier(candidate)
             if cn and (cn in qn or qn in cn):
@@ -269,7 +303,7 @@ def _domain_score(query_scope: str, query_discipline: str, source_scope: str, so
     return -0.10
 
 
-def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_K) -> list[dict]:
+def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_K, source_filter: str | None = None) -> list[dict]:
     """Hybrid search: semantic candidates reranked by keyword coverage."""
     if _rag_chunks is None or _rag_embeddings is None:
         return []
@@ -289,6 +323,8 @@ def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_
     for idx in candidate_idx:
         c = _rag_chunks[int(idx)]
         filename = c.get("filename", "未知来源")
+        if source_filter and filename != source_filter:
+            continue
         if not _source_is_approved(filename):
             continue
         meta = _source_meta(filename)
@@ -410,6 +446,8 @@ def search_regulation(query: str) -> str:
         }, ensure_ascii=False)
 
     _load_rag()
+    approved_exact = _approved_source_match(query)
+    source_filter = approved_exact.get("filename") if approved_exact else None
 
     if _rag_chunks is None or _rag_embeddings is None:
         return json.dumps({
@@ -426,7 +464,7 @@ def search_regulation(query: str) -> str:
             "answer_policy": "不得凭经验回答；请稍后重试或要求管理员检查 DASHSCOPE_API_KEY。",
         }, ensure_ascii=False)
 
-    results = _cosine_search(q_vec, query)
+    results = _cosine_search(q_vec, query, source_filter=source_filter)
     top_similarity = results[0]["similarity"] if results else 0.0
     if not results or top_similarity < STRICT_MIN_SIMILARITY:
         logger.info("RAG strict refusal: top_similarity=%.4f query=%s", top_similarity, query)
@@ -478,6 +516,7 @@ def search_regulation(query: str) -> str:
         "top_similarity": top_similarity,
         "threshold": STRICT_MIN_SIMILARITY,
         "citations": citations,
+        "source_filter": source_filter or "",
         "answer_policy": "只能基于 result 中的原文摘录回答；必须引用来源；不得添加未被摘录支持的内容。",
     }, ensure_ascii=False)
 
