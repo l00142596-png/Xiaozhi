@@ -237,6 +237,38 @@ def _tail_clause_penalty(query: str, body: str) -> float:
     return 0.0
 
 
+def _infer_query_domain(query: str) -> tuple[str, str]:
+    """Infer the user's intended railway sub-domain from explicit keywords."""
+    if any(x in query for x in ["桥隧", "桥梁", "隧道", "涵洞", "桥涵"]):
+        return "普速铁路", "桥隧建筑物"
+    if any(x in query for x in ["线路修理", "线路维修", "钢轨", "轨道", "道岔", "线路设备"]):
+        return "普速铁路", "线路修理"
+    if any(x in query for x in ["工务安全", "工务作业", "工务"]):
+        return "普速铁路", "工务安全"
+    if ("普速" in query or "普速铁路" in query) and any(x in query for x in ["技规", "技术管理规程"]):
+        return "普速铁路", "技术管理规程"
+    if any(x in query for x in ["营业线施工", "施工管理", "天窗", "维修作业", "邻近营业线"]):
+        return "营业线施工", "施工管理/通知办法"
+    if any(x in query for x in ["接触网", "供电"]):
+        return "供电专业", "接触网"
+    if any(x in query for x in ["信号", "电务"]):
+        return "电务专业", "信号/电务"
+    return "", ""
+
+
+def _domain_score(query_scope: str, query_discipline: str, source_scope: str, source_discipline: str) -> float:
+    if not query_scope and not query_discipline:
+        return 0.0
+    if query_scope == source_scope and query_discipline == source_discipline:
+        return 0.10
+    if query_discipline and query_discipline == source_discipline:
+        return 0.06
+    if query_scope and query_scope == source_scope:
+        return 0.03
+    # A clear sub-domain query should not be silently answered from another specialty.
+    return -0.10
+
+
 def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_K) -> list[dict]:
     """Hybrid search: semantic candidates reranked by keyword coverage."""
     if _rag_chunks is None or _rag_embeddings is None:
@@ -252,18 +284,26 @@ def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_
     pool_size = min(len(sims), max(top_k * 10, 50))
     candidate_idx = np.argsort(sims)[::-1][:pool_size]
 
+    query_scope, query_discipline = _infer_query_domain(query_text)
     scored = []
     for idx in candidate_idx:
         c = _rag_chunks[int(idx)]
         filename = c.get("filename", "未知来源")
         if not _source_is_approved(filename):
             continue
+        meta = _source_meta(filename)
         body = f"{filename} {c.get('title', '')} {c.get('text', '')}"
         similarity = float(sims[idx])
         coverage = _keyword_coverage(query_text, body)
         penalty = _tail_clause_penalty(query_text, body)
         authority_boost = max(0, _source_priority(filename) - 60) / 1000
-        hybrid = similarity + 0.08 * coverage + authority_boost - penalty
+        domain_boost = _domain_score(
+            query_scope,
+            query_discipline,
+            str(meta.get("railway_scope", "")),
+            str(meta.get("discipline", "")),
+        )
+        hybrid = similarity + 0.08 * coverage + authority_boost + domain_boost - penalty
         scored.append((hybrid, similarity, coverage, penalty, idx))
     scored.sort(reverse=True, key=lambda x: x[0])
 
@@ -283,6 +323,8 @@ def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_
             "document_no": meta.get("document_no", ""),
             "issuer": meta.get("issuer", ""),
             "effective_year": meta.get("effective_year"),
+            "railway_scope": meta.get("railway_scope", ""),
+            "discipline": meta.get("discipline", ""),
             "source_level": _source_level(filename),
             "page": _extract_page(c),
             "title": c.get("title") or "相关条文",
@@ -420,6 +462,8 @@ def search_regulation(query: str) -> str:
             "document_no": r.get("document_no", ""),
             "issuer": r.get("issuer", ""),
             "effective_year": r.get("effective_year"),
+            "railway_scope": r.get("railway_scope", ""),
+            "discipline": r.get("discipline", ""),
             "page": r["page"],
             "title": r["title"],
             "similarity": r["similarity"],

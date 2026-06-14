@@ -16,11 +16,21 @@ Strict behavior:
 - Duplicate, incomplete, rejected, or reference-only sources stay outside the active RAG.
 - If the user explicitly names a disabled source/document number, the tool refuses to answer from similar files.
 - Low confidence results are refused with “未检索到足够可靠的标准规范依据”.
-- Returned results include source file, authority level, priority, issuer, document number, year, page/article hint, similarity, and keyword coverage.
+- Returned results include source file, authority level, priority, issuer, document number, year, page/article hint, similarity, keyword coverage, railway scope, and discipline.
+- Domain-aware ranking keeps explicit sub-domain queries inside the right norm family where possible.
 - The answer policy requires citation and forbids unsupported additions.
 
+PuSu railway taxonomy examples:
+- 普速铁路 / 技术管理规程
+- 普速铁路 / 线路修理
+- 普速铁路 / 桥隧建筑物
+- 普速铁路 / 工务安全
+- 营业线施工 / 施工管理/通知办法
+- 供电专业 / 接触网
+- 电务专业 / 信号/电务
+
 Governance files:
-- `source_registry_all.json`: all strict-candidate sources with status and metadata.
+- `source_registry_all.json`: all strict-candidate sources with status, metadata, railway scope, and discipline.
 - `source_registry_active.json`: approved sources currently loaded by the service.
 - `source_overrides.json`: manual decisions that must survive registry regeneration.
 - `source_review_todo.txt`: metadata gaps and disabled-source reasons.
