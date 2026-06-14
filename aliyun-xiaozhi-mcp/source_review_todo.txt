@@ -1,0 +1,34 @@
+[approved] TG GD 108-2014 高速铁路接触网安全工作规则.pdf | chunks=148 | no=TG GD 108-2014 | issuer=- | notes=发布单位待人工补录
+[disabled] TG GD 115-2017 普速铁路接触网安全工作规则.pdf | chunks=1 | no=TG GD 115-2017 | issuer=- | notes=发布单位待人工补录
+[approved] TG GD 124-2015 高速铁路接触网运行维修规则.pdf | chunks=281 | no=TG GD 124-2015 | issuer=- | notes=发布单位待人工补录
+[approved] TG GW 115-2023 高速铁路线路维修规则.pdf | chunks=852 | no=TG GW 115-2023 | issuer=- | notes=发布单位待人工补录
+[approved] TG JW 104-2012 铁路机车操作规则.pdf | chunks=432 | no=TG JW 104-2012 | issuer=- | notes=发布单位待人工补录
+[approved] TG XH 101-2015 普速铁路信号维护规则 业务管理.pdf | chunks=1573 | no=TG XH 101-2015 | issuer=- | notes=发布单位待人工补录
+[approved] TG XH 101-2015 普速铁路信号维护规则 技术标准.pdf | chunks=1238 | no=TG XH 101-2015 | issuer=- | notes=发布单位待人工补录
+[approved] TG XH103-2015 铁路电务安全规则.pdf | chunks=578 | no=TG XH103-2015 | issuer=- | notes=发布单位待人工补录
+[approved] TGGW 102-2019 普速铁路线路修理规则.pdf | chunks=875 | no=TGGW 102-2019 | issuer=- | notes=发布单位待人工补录
+[approved] TGGW 102A-2022 普速铁路线路修理规则补充规定.pdf | chunks=38 | no=TGGW 102A-2022 | issuer=- | notes=发布单位待人工补录
+[disabled] 上铁施工[2021]301号中国铁路上海局集团有限公司关于印发中国铁路上海局集团有限公司铁路营业线施工管理实施细则的通知(1).pdf | chunks=354 | no=上铁施工[2021]301号 | issuer=中国铁路上海局集团有限公司 | notes=疑似重复文件，保留原始文件作为引用来源
+[disabled] 中华人民共和国铁路法2015.docx | chunks=18 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[approved] 中华人民共和国铁路法2015.pdf | chunks=87 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[approved] 中国铁路总公司关于深化铁路建设项目标准化管理的指导意见.pdf | chunks=32 | no=- | issuer=中国铁路总公司 | notes=文号待人工补录; 年份/生效日期待人工补录
+[approved] 国务院办公厅关于印发国家铁路局主要职责内设机构和人员编制规定的通知.pdf | chunks=23 | no=- | issuer=国务院/国务院办公厅 | notes=文号待人工补录; 年份/生效日期待人工补录
+[approved] 技规普速上册.pdf | chunks=600 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 技规普速下册.pdf | chunks=140 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 技规普速中册.pdf | chunks=909 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 技规高速上册.pdf | chunks=376 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 技规高速下册.pdf | chunks=127 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 技规高速中册.pdf | chunks=616 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 普速铁路工务安全规则2023.pdf | chunks=418 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[approved] 普速铁路桥隧建筑物修理规则2018版-216.pdf | chunks=765 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[approved] 普速铁路桥隧建筑物修理规则2018版.docx | chunks=566 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[disabled] 铁路安全管理条例2014.docx | chunks=110 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[approved] 铁路安全管理条例2014.pdf | chunks=111 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[approved] 铁路工程建设标准设计管理办法.pdf | chunks=13 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录; 切片数较少，请核对完整性
+[approved] 铁路建设项目变更设计管理办法.pdf | chunks=67 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 铁路技术管理规程-普速铁路部分.pdf | chunks=1178 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 铁路技术管理规程-高速铁路部分.pdf | chunks=1114 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录
+[approved] 铁路环境保护规定 铁道部铁计[1997]46 号.pdf | chunks=54 | no=- | issuer=原铁道部 | notes=文号待人工补录
+[approved] 铁路给水管理规程 --中华人民共和国铁道部编 -- 2000-- 北京_中国铁道出版社.pdf | chunks=497 | no=- | issuer=原铁道部 | notes=文号待人工补录
+[approved] 铁路行业统计规则 2019.pdf | chunks=359 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录
+[approved] 铁路运输安全保护条例.pdf | chunks=116 | no=- | issuer=- | notes=文号待人工补录; 发布单位待人工补录; 年份/生效日期待人工补录

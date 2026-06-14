@@ -24,6 +24,7 @@ if not DEFAULT_RAG_DIR.exists():
 RAG_DIR = Path(os.environ.get("KB_RAG_DIR", DEFAULT_RAG_DIR))
 CHUNKS_FILE = Path(os.environ.get("KB_CHUNKS_FILE", RAG_DIR / "chunks.json"))
 EMB_FILE = Path(os.environ.get("KB_EMB_FILE", RAG_DIR / "embeddings.npz"))
+SOURCE_REGISTRY_FILE = Path(os.environ.get("KB_SOURCE_REGISTRY", RAG_DIR / "source_registry.json"))
 MAX_RESULT = int(os.environ.get("KB_MAX_RESULT_BYTES", "2400"))
 RAG_TOP_K = int(os.environ.get("KB_RAG_TOP_K", "6"))
 STRICT_MIN_SIMILARITY = float(os.environ.get("KB_STRICT_MIN_SIMILARITY", "0.60"))
@@ -39,6 +40,7 @@ mcp = FastMCP("知识库")
 
 _rag_chunks: list[dict] | None = None
 _rag_embeddings: np.ndarray | None = None
+_source_registry: dict[str, dict] | None = None
 
 
 def _load_rag():
@@ -58,6 +60,7 @@ def _load_rag():
         _rag_chunks = None
         _rag_embeddings = None
         return
+    _load_source_registry()
     logger.info(
         "RAG loaded: dir=%s chunks=%d dim=%d strict_min=%.2f result_min=%.2f",
         RAG_DIR,
@@ -95,16 +98,68 @@ def _embed_query(text: str) -> np.ndarray | None:
         return None
 
 
-def _source_level(filename: str) -> str:
+def _load_source_registry() -> dict[str, dict]:
+    """Load approved-source metadata for strict citation governance."""
+    global _source_registry
+    if _source_registry is not None:
+        return _source_registry
+    _source_registry = {}
+    if SOURCE_REGISTRY_FILE.exists():
+        try:
+            data = json.loads(SOURCE_REGISTRY_FILE.read_text(encoding="utf-8"))
+            _source_registry = {item.get("filename", ""): item for item in data if item.get("filename")}
+            logger.info("Source registry loaded: %d sources from %s", len(_source_registry), SOURCE_REGISTRY_FILE)
+        except Exception as e:
+            logger.error("Source registry load failed: %s", e)
+    else:
+        logger.warning("Source registry missing: %s; fallback allows all loaded sources", SOURCE_REGISTRY_FILE)
+    return _source_registry
+
+
+def _source_meta(filename: str) -> dict:
+    registry = _load_source_registry()
+    meta = registry.get(filename)
+    if meta:
+        return meta
+    level, priority = _infer_source_level(filename)
+    return {
+        "filename": filename,
+        "status": "approved",
+        "authority_level": level,
+        "priority": priority,
+        "document_type": "unregistered",
+        "issuer": "",
+        "document_no": "",
+        "effective_year": None,
+        "effective_date": "",
+        "scope": "",
+        "review_notes": ["未登记来源，建议补录元数据"],
+    }
+
+
+def _source_is_approved(filename: str) -> bool:
+    meta = _source_meta(filename)
+    return meta.get("status", "approved") == "approved"
+
+
+def _source_priority(filename: str) -> int:
+    return int(_source_meta(filename).get("priority", 60) or 60)
+
+
+def _infer_source_level(filename: str) -> tuple[str, int]:
     if any(x in filename for x in ["中华人民共和国", "国务院", "铁路安全管理条例", "铁路法"]):
-        return "法律法规/行政法规"
+        return "法律法规/行政法规", 100
     if any(x in filename for x in ["国铁", "国家铁路局", "中国铁路总公司", "铁总", "铁调"]):
-        return "国家铁路/国铁集团文件"
+        return "国家铁路/国铁集团文件", 90
     if any(x in filename for x in ["TG ", "TGGW", "规则", "规程", "技规"]):
-        return "技术规章/行业规则"
+        return "技术规章/行业规则", 80
     if any(x in filename for x in ["上铁", "成铁", "局集团"]):
-        return "局集团实施细则"
-    return "规范资料"
+        return "局集团实施细则", 70
+    return "规范资料", 60
+
+
+def _source_level(filename: str) -> str:
+    return str(_source_meta(filename).get("authority_level") or _infer_source_level(filename)[0])
 
 
 def _extract_page(chunk: dict) -> str:
@@ -162,11 +217,15 @@ def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_
     scored = []
     for idx in candidate_idx:
         c = _rag_chunks[int(idx)]
-        body = f"{c.get('filename', '')} {c.get('title', '')} {c.get('text', '')}"
+        filename = c.get("filename", "未知来源")
+        if not _source_is_approved(filename):
+            continue
+        body = f"{filename} {c.get('title', '')} {c.get('text', '')}"
         similarity = float(sims[idx])
         coverage = _keyword_coverage(query_text, body)
         penalty = _tail_clause_penalty(query_text, body)
-        hybrid = similarity + 0.08 * coverage - penalty
+        authority_boost = max(0, _source_priority(filename) - 60) / 1000
+        hybrid = similarity + 0.08 * coverage + authority_boost - penalty
         scored.append((hybrid, similarity, coverage, penalty, idx))
     scored.sort(reverse=True, key=lambda x: x[0])
 
@@ -174,12 +233,18 @@ def _cosine_search(query_vec: np.ndarray, query_text: str, top_k: int = RAG_TOP_
     for rank, (hybrid, similarity, coverage, penalty, idx) in enumerate(scored[:top_k]):
         c = _rag_chunks[int(idx)]
         filename = c.get("filename", "未知来源")
+        meta = _source_meta(filename)
         results.append({
             "rank": rank + 1,
             "similarity": round(similarity, 4),
             "hybrid_score": round(float(hybrid), 4),
             "keyword_coverage": round(float(coverage), 4),
             "source": filename,
+            "source_status": meta.get("status", "approved"),
+            "source_priority": meta.get("priority", _source_priority(filename)),
+            "document_no": meta.get("document_no", ""),
+            "issuer": meta.get("issuer", ""),
+            "effective_year": meta.get("effective_year"),
             "source_level": _source_level(filename),
             "page": _extract_page(c),
             "title": c.get("title") or "相关条文",
@@ -293,7 +358,8 @@ def search_regulation(query: str) -> str:
         snippet = _truncate(r["text"], 650)
         output_parts.append(
             f"[{i}] 来源文件：{r['source']}\n"
-            f"资料级别：{r['source_level']}\n"
+            f"资料级别：{r['source_level']}，优先级：{r.get('source_priority', '')}\n"
+            f"发布单位：{r.get('issuer') or '待补录'}；文号：{r.get('document_no') or '待补录'}；年份：{r.get('effective_year') or '待补录'}\n"
             f"位置：{r['page']}\n"
             f"标题：{r['title']}\n"
             f"相关度：{r['similarity']}，关键词覆盖：{r.get('keyword_coverage', 0)}\n"
@@ -303,6 +369,10 @@ def search_regulation(query: str) -> str:
             "ref": i,
             "source": r["source"],
             "source_level": r["source_level"],
+            "source_priority": r.get("source_priority"),
+            "document_no": r.get("document_no", ""),
+            "issuer": r.get("issuer", ""),
+            "effective_year": r.get("effective_year"),
             "page": r["page"],
             "title": r["title"],
             "similarity": r["similarity"],

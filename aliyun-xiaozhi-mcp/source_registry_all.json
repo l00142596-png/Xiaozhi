@@ -1,0 +1,701 @@
+[
+  {
+    "filename": "(铁调[2021]160号)国铁集团关于印发国铁集团铁路营业线施工管理办法的通知内部直发.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 208,
+    "authority_level": "国家铁路/国铁集团文件",
+    "priority": 90,
+    "document_type": "management_rule",
+    "issuer": "中国国家铁路集团有限公司",
+    "document_no": "铁调[2021]160号",
+    "effective_year": 2021,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
+    "filename": "TG GD 108-2014 高速铁路接触网安全工作规则.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 148,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG GD 108-2014",
+    "effective_year": 2014,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TG GD 115-2017 普速铁路接触网安全工作规则.pdf",
+    "status": "disabled",
+    "disabled_reason": "切片数过少，疑似文件不完整，暂不作为严格引用依据",
+    "chunk_count": 1,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG GD 115-2017",
+    "effective_year": 2017,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TG GD 116-2017 普速铁路接触网运行维修规则（铁总运[2017]9号）.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 403,
+    "authority_level": "国家铁路/国铁集团文件",
+    "priority": 90,
+    "document_type": "technical_rule",
+    "issuer": "中国铁路总公司",
+    "document_no": "TG GD 116-2017",
+    "effective_year": 2017,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
+    "filename": "TG GD 124-2015 高速铁路接触网运行维修规则.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 281,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG GD 124-2015",
+    "effective_year": 2015,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TG GW 115-2023 高速铁路线路维修规则.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 852,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG GW 115-2023",
+    "effective_year": 2023,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TG JW 104-2012 铁路机车操作规则.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 432,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG JW 104-2012",
+    "effective_year": 2012,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TG XH 101-2015 普速铁路信号维护规则 业务管理.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 1573,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG XH 101-2015",
+    "effective_year": 2015,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TG XH 101-2015 普速铁路信号维护规则 技术标准.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 1238,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG XH 101-2015",
+    "effective_year": 2015,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TG XH103-2015 铁路电务安全规则.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 578,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TG XH103-2015",
+    "effective_year": 2015,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TGGW 102-2019 普速铁路线路修理规则.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 875,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TGGW 102-2019",
+    "effective_year": 2019,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "TGGW 102A-2022 普速铁路线路修理规则补充规定.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 38,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "TGGW 102A-2022",
+    "effective_year": 2022,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "上铁施工[2021]301号中国铁路上海局集团有限公司关于印发中国铁路上海局集团有限公司铁路营业线施工管理实施细则的通知(1).pdf",
+    "status": "disabled",
+    "disabled_reason": "疑似重复文件，保留原始文件作为引用来源",
+    "chunk_count": 354,
+    "authority_level": "国家铁路/国铁集团文件",
+    "priority": 90,
+    "document_type": "management_rule",
+    "issuer": "中国铁路上海局集团有限公司",
+    "document_no": "上铁施工[2021]301号",
+    "effective_year": 2021,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
+    "filename": "上铁施工[2021]301号中国铁路上海局集团有限公司关于印发中国铁路上海局集团有限公司铁路营业线施工管理实施细则的通知.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 354,
+    "authority_level": "国家铁路/国铁集团文件",
+    "priority": 90,
+    "document_type": "management_rule",
+    "issuer": "中国铁路上海局集团有限公司",
+    "document_no": "上铁施工[2021]301号",
+    "effective_year": 2021,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
+    "filename": "中华人民共和国铁路法2015.docx",
+    "status": "disabled",
+    "disabled_reason": "与 PDF 来源重复，严格引用优先使用 PDF",
+    "chunk_count": 18,
+    "authority_level": "法律法规/行政法规",
+    "priority": 100,
+    "document_type": "law_or_regulation",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2015,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "中华人民共和国铁路法2015.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 87,
+    "authority_level": "法律法规/行政法规",
+    "priority": 100,
+    "document_type": "law_or_regulation",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2015,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "中国铁路总公司关于深化铁路建设项目标准化管理的指导意见.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 32,
+    "authority_level": "国家铁路/国铁集团文件",
+    "priority": 90,
+    "document_type": "management_rule",
+    "issuer": "中国铁路总公司",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "国务院办公厅关于印发国家铁路局主要职责内设机构和人员编制规定的通知.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 23,
+    "authority_level": "法律法规/行政法规",
+    "priority": 100,
+    "document_type": "management_rule",
+    "issuer": "国务院/国务院办公厅",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "国铁运输监[2021]31号国家铁路局关于印发铁路营业线施工安全管理办法的通知2021-09-30.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 71,
+    "authority_level": "国家铁路/国铁集团文件",
+    "priority": 90,
+    "document_type": "management_rule",
+    "issuer": "国家铁路局",
+    "document_no": "铁运输监[2021]31号",
+    "effective_year": 2021,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
+    "filename": "成铁施工[2018]58号关于印发成都局集团公司营业线施工安全管理实施细则的通知.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 812,
+    "authority_level": "局集团实施细则",
+    "priority": 70,
+    "document_type": "management_rule",
+    "issuer": "中国铁路成都局集团有限公司",
+    "document_no": "成铁施工[2018]58号",
+    "effective_year": 2018,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
+    "filename": "技规普速上册.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 600,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "技规普速下册.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 140,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "技规普速中册.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 909,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "技规高速上册.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 376,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "技规高速下册.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 127,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "技规高速中册.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 616,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "普速铁路工务安全规则2023.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 418,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2023,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "普速铁路桥隧建筑物修理规则2018版-216.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 765,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2018,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "普速铁路桥隧建筑物修理规则2018版.docx",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 566,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2018,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "铁总办[2013]107号 中国铁路总公司关于印发高速铁路联调联试及运行试验实施细则的通知(6.25MB)6cc39c9bcb526a10.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 131,
+    "authority_level": "国家铁路/国铁集团文件",
+    "priority": 90,
+    "document_type": "management_rule",
+    "issuer": "中国铁路总公司",
+    "document_no": "铁总办[2013]107号",
+    "effective_year": 2013,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": []
+  },
+  {
+    "filename": "铁路安全管理条例2014.docx",
+    "status": "disabled",
+    "disabled_reason": "与 PDF 来源重复，严格引用优先使用 PDF",
+    "chunk_count": 110,
+    "authority_level": "法律法规/行政法规",
+    "priority": 100,
+    "document_type": "law_or_regulation",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2014,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路安全管理条例2014.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 111,
+    "authority_level": "法律法规/行政法规",
+    "priority": 100,
+    "document_type": "law_or_regulation",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2014,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路工程建设标准设计管理办法.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 13,
+    "authority_level": "规范资料",
+    "priority": 60,
+    "document_type": "management_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录",
+      "切片数较少，请核对完整性"
+    ]
+  },
+  {
+    "filename": "铁路建设项目变更设计管理办法.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 67,
+    "authority_level": "规范资料",
+    "priority": 60,
+    "document_type": "management_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路技术管理规程-普速铁路部分.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 1178,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路技术管理规程-高速铁路部分.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 1114,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路环境保护规定 铁道部铁计[1997]46 号.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 54,
+    "authority_level": "规范资料",
+    "priority": 60,
+    "document_type": "management_rule",
+    "issuer": "原铁道部",
+    "document_no": "",
+    "effective_year": 1997,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路给水管理规程 --中华人民共和国铁道部编 -- 2000-- 北京_中国铁道出版社.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 497,
+    "authority_level": "法律法规/行政法规",
+    "priority": 100,
+    "document_type": "technical_rule",
+    "issuer": "原铁道部",
+    "document_no": "",
+    "effective_year": 2000,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路行业统计规则 2019.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 359,
+    "authority_level": "技术规章/行业规则",
+    "priority": 80,
+    "document_type": "technical_rule",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": 2019,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录"
+    ]
+  },
+  {
+    "filename": "铁路运输安全保护条例.pdf",
+    "status": "approved",
+    "disabled_reason": "",
+    "chunk_count": 116,
+    "authority_level": "法律法规/行政法规",
+    "priority": 100,
+    "document_type": "law_or_regulation",
+    "issuer": "",
+    "document_no": "",
+    "effective_year": null,
+    "effective_date": "",
+    "scope": "",
+    "review_notes": [
+      "文号待人工补录",
+      "发布单位待人工补录",
+      "年份/生效日期待人工补录"
+    ]
+  }
+]
