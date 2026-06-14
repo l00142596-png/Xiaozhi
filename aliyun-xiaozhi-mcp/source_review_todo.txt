@@ -1,5 +1,5 @@
 [approved] TG GD 108-2014 高速铁路接触网安全工作规则.pdf | chunks=148 | no=TG GD 108-2014 | issuer=- | notes=发布单位待人工补录
-[disabled] TG GD 115-2017 普速铁路接触网安全工作规则.pdf | chunks=1 | no=TG GD 115-2017 | issuer=- | notes=发布单位待人工补录
+[disabled] TG GD 115-2017 普速铁路接触网安全工作规则.pdf | chunks=1 | no=TG GD 115-2017 | issuer=- | notes=发布单位待人工补录; 用户确认不是同一个规范
 [approved] TG GD 124-2015 高速铁路接触网运行维修规则.pdf | chunks=281 | no=TG GD 124-2015 | issuer=- | notes=发布单位待人工补录
 [approved] TG GW 115-2023 高速铁路线路维修规则.pdf | chunks=852 | no=TG GW 115-2023 | issuer=- | notes=发布单位待人工补录
 [approved] TG JW 104-2012 铁路机车操作规则.pdf | chunks=432 | no=TG JW 104-2012 | issuer=- | notes=发布单位待人工补录

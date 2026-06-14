@@ -25,6 +25,7 @@ RAG_DIR = Path(os.environ.get("KB_RAG_DIR", DEFAULT_RAG_DIR))
 CHUNKS_FILE = Path(os.environ.get("KB_CHUNKS_FILE", RAG_DIR / "chunks.json"))
 EMB_FILE = Path(os.environ.get("KB_EMB_FILE", RAG_DIR / "embeddings.npz"))
 SOURCE_REGISTRY_FILE = Path(os.environ.get("KB_SOURCE_REGISTRY", RAG_DIR / "source_registry.json"))
+ALL_SOURCE_REGISTRY_FILE = Path(os.environ.get("KB_ALL_SOURCE_REGISTRY", BASE_DIR / "rag_strict" / "source_registry.json"))
 MAX_RESULT = int(os.environ.get("KB_MAX_RESULT_BYTES", "2400"))
 RAG_TOP_K = int(os.environ.get("KB_RAG_TOP_K", "6"))
 STRICT_MIN_SIMILARITY = float(os.environ.get("KB_STRICT_MIN_SIMILARITY", "0.60"))
@@ -41,6 +42,7 @@ mcp = FastMCP("知识库")
 _rag_chunks: list[dict] | None = None
 _rag_embeddings: np.ndarray | None = None
 _source_registry: dict[str, dict] | None = None
+_all_source_registry: dict[str, dict] | None = None
 
 
 def _load_rag():
@@ -144,6 +146,42 @@ def _source_is_approved(filename: str) -> bool:
 
 def _source_priority(filename: str) -> int:
     return int(_source_meta(filename).get("priority", 60) or 60)
+
+
+def _load_all_source_registry() -> dict[str, dict]:
+    """Load all source decisions, including disabled files, for exact-match refusal."""
+    global _all_source_registry
+    if _all_source_registry is not None:
+        return _all_source_registry
+    _all_source_registry = {}
+    if ALL_SOURCE_REGISTRY_FILE.exists():
+        try:
+            data = json.loads(ALL_SOURCE_REGISTRY_FILE.read_text(encoding="utf-8"))
+            _all_source_registry = {item.get("filename", ""): item for item in data if item.get("filename")}
+        except Exception as e:
+            logger.error("All source registry load failed: %s", e)
+    return _all_source_registry
+
+
+def _normalize_identifier(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r"\.(pdf|docx)$", "", text)
+    return re.sub(r"[^0-9a-z\u4e00-\u9fff]+", "", text)
+
+
+def _disabled_source_match(query: str) -> dict | None:
+    qn = _normalize_identifier(query)
+    if not qn:
+        return None
+    for item in _load_all_source_registry().values():
+        if item.get("status") == "approved":
+            continue
+        candidates = [item.get("filename", ""), item.get("document_no", "")]
+        for candidate in candidates:
+            cn = _normalize_identifier(candidate)
+            if cn and (cn in qn or qn in cn):
+                return item
+    return None
 
 
 def _infer_source_level(filename: str) -> tuple[str, int]:
@@ -320,6 +358,15 @@ def search_regulation(query: str) -> str:
 回答要求：只能依据本工具返回的原文摘录回答；必须引用来源文件和页码/条目；未检索到可靠依据时必须明确说“未检索到可靠依据”，不得凭经验补充。
 """
     logger.info("search_regulation: query=%s", query)
+    disabled = _disabled_source_match(query)
+    if disabled:
+        return json.dumps({
+            "mode": "strict_citation",
+            "result": f"用户明确查询的来源未启用，不能作为严格规范依据：{disabled.get('filename')}。原因：{disabled.get('disabled_reason') or '该来源未批准'}。请提供正确完整文件或改问其他已批准规范。",
+            "disabled_source": disabled,
+            "answer_policy": "不得用相近文件替代被点名的未启用来源；不得编造该文件内容。",
+        }, ensure_ascii=False)
+
     _load_rag()
 
     if _rag_chunks is None or _rag_embeddings is None:

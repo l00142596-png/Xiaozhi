@@ -8,6 +8,7 @@ CHUNKS = RAG / 'chunks.json'
 REGISTRY = RAG / 'source_registry.json'
 APPROVED = RAG / 'approved_sources.txt'
 TODO = RAG / 'source_review_todo.txt'
+OVERRIDES = RAG / 'source_overrides.json'
 
 
 def norm_name(name: str) -> str:
@@ -89,6 +90,7 @@ def reason_for_disabled(name: str, chunks: int, names_by_norm: dict[str, list[st
 
 
 def main():
+    overrides = json.loads(OVERRIDES.read_text(encoding='utf-8')) if OVERRIDES.exists() else {}
     chunks = json.loads(CHUNKS.read_text(encoding='utf-8'))
     counts = {}
     for c in chunks:
@@ -113,7 +115,7 @@ def main():
             review.append('年份/生效日期待人工补录')
         if count < 20 and status == 'approved':
             review.append('切片数较少，请核对完整性')
-        registry.append({
+        item = {
             'filename': name,
             'status': status,
             'disabled_reason': disabled_reason,
@@ -127,7 +129,16 @@ def main():
             'effective_date': '',
             'scope': '',
             'review_notes': review,
-        })
+        }
+        override = overrides.get(name, {})
+        for key, value in override.items():
+            if key == 'review_notes_add':
+                for note in value:
+                    if note not in item['review_notes']:
+                        item['review_notes'].append(note)
+            else:
+                item[key] = value
+        registry.append(item)
 
     REGISTRY.write_text(json.dumps(registry, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     APPROVED.write_text('\n'.join(r['filename'] for r in registry if r['status'] == 'approved') + '\n', encoding='utf-8')

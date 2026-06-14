@@ -34,7 +34,7 @@
   {
     "filename": "TG GD 115-2017 普速铁路接触网安全工作规则.pdf",
     "status": "disabled",
-    "disabled_reason": "切片数过少，疑似文件不完整，暂不作为严格引用依据",
+    "disabled_reason": "用户确认不是同一个规范，不作为严格引用依据；需重新提供正确完整文件后再启用",
     "chunk_count": 1,
     "authority_level": "技术规章/行业规则",
     "priority": 80,
@@ -45,7 +45,8 @@
     "effective_date": "",
     "scope": "",
     "review_notes": [
-      "发布单位待人工补录"
+      "发布单位待人工补录",
+      "用户确认不是同一个规范"
     ]
   },
   {
