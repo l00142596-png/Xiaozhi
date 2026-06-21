@@ -1,0 +1,68 @@
+{
+  "mcpEndpoint": "wss://api.xiaozhi.me/mcp/?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjk2NDMzOSwiYWdlbnRJZCI6MjAwMjYzMCwiZW5kcG9pbnRJZCI6ImFnZW50XzIwMDI2MzAiLCJwdXJwb3NlIjoibWNwLWVuZHBvaW50IiwiaWF0IjoxNzgwODQxMTkwLCJleHAiOjE4MTIzOTg3OTB9.B6llxGBeuLDTTtWpBHmViRDFtBPnT3cm8ev0hy5Vg61wExTQQpnEuXOHoNkGnjZjztKk_m7vf9Std2r152V5mA",
+  "mcpServers": {
+    "knowledge": {
+      "type": "sse",
+      "url": "http://127.0.0.1:8766/sse"
+    }
+  },
+  "asr": {
+    "model": "doubao",
+    "appid": "",
+    "accessToken": ""
+  },
+  "llm": {
+    "prompt": "./prompts/default.md",
+    "model": "",
+    "apiKey": "",
+    "baseURL": ""
+  },
+  "tts": {
+    "model": "doubao",
+    "appid": "",
+    "accessToken": "",
+    "voice_type": "zh_female_xiaohe_uranus_bigtts"
+  },
+  "connection": {
+    "heartbeatInterval": 30000,
+    "heartbeatTimeout": 10000,
+    "reconnectInterval": 60000
+  },
+  "webUI": {
+    "port": 9999
+  },
+  "mcpServerConfig": {
+    "knowledge": {
+      "tools": {
+        "save_knowledge": {
+          "description": "保存一条知识到本地知识库。",
+          "enable": true
+        },
+        "search_knowledge": {
+          "description": "在本地 JSON 知识库中按关键词搜索。",
+          "enable": true,
+          "usageCount": 2,
+          "lastUsedTime": "2026-06-16 07:37:50"
+        },
+        "list_all_knowledge": {
+          "description": "列出本地 JSON 知识库中所有知识标题。\n\n约束：这是最终回复型工具。\n当用户询问“有多少”或“有哪些”时，直接给出数量和标题列表，不要追加“需要我展开哪一条吗”之类的追问。",
+          "enable": true,
+          "usageCount": 5,
+          "lastUsedTime": "2026-06-21 20:53:44"
+        },
+        "search_regulation": {
+          "description": "严格检索铁路法规、规程、规则、标准和正式管理文件。\n\n使用要求：涉及铁路施工、安全、技术标准、作业限制、设备维修、营业线管理等问题时，必须先调用本工具。\n回答要求：只能依据本工具返回的原文摘录回答；必须引用来源文件和页码/条目；未检索到可靠依据时必须明确说“未检索到可靠依据”，不得凭经验补充。",
+          "enable": true,
+          "usageCount": 13,
+          "lastUsedTime": "2026-06-21 20:30:04"
+        },
+        "railway_safety_workflow": {
+          "description": "内部铁路施工安全流程状态机。\n\n当用户提到 K100+350 / K100加350、信号机更换、施工计划、安全风险防控点、确认下发、电子围栏时调用。\n不要向用户暴露工具名；只把 result 字段作为小五自然回复。",
+          "enable": true,
+          "usageCount": 27,
+          "lastUsedTime": "2026-06-21 21:51:23"
+        }
+      }
+    }
+  }
+}

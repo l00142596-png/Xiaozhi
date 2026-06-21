@@ -1,0 +1,21 @@
+[Unit]
+Description=Xiaozhi Knowledge Base MCP Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/xiaozhi-mcp
+EnvironmentFile=-/etc/xiaozhi-mcp.env
+Environment=KB_BASE_DIR=/opt/xiaozhi-mcp
+Environment=KB_HOST=127.0.0.1
+Environment=KB_PORT=8766
+ExecStartPre=/opt/xiaozhi-mcp/venv/bin/python -m py_compile /opt/xiaozhi-mcp/kb_server_v2.py
+ExecStart=/opt/xiaozhi-mcp/venv/bin/python /opt/xiaozhi-mcp/kb_server_v2.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/kb_server.log
+StandardError=append:/var/log/kb_server.log
+
+[Install]
+WantedBy=multi-user.target
