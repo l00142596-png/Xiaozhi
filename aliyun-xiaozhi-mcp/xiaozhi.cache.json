@@ -1,0 +1,193 @@
+{
+  "version": "1.0.0",
+  "mcpServers": {
+    "datetime": {
+      "tools": [
+        {
+          "name": "get_current_time",
+          "description": "获取当前时间，支持多种格式",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "description": "时间格式：'iso'（默认）、'timestamp'、'locale'、'time-only'",
+                "type": "string"
+              }
+            },
+            "$schema": "http://json-schema.org/draft-07/schema#"
+          }
+        },
+        {
+          "name": "get_current_date",
+          "description": "获取当前日期，支持多种格式",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "description": "日期格式：'iso'（默认）、'locale'、'date-only'、'yyyy-mm-dd'",
+                "type": "string"
+              }
+            },
+            "$schema": "http://json-schema.org/draft-07/schema#"
+          }
+        },
+        {
+          "name": "format_datetime",
+          "description": "将给定的日期时间字符串或时间戳格式化为指定格式",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "datetime": {
+                "type": "string",
+                "description": "要格式化的日期时间字符串或时间戳"
+              },
+              "format": {
+                "description": "输出格式：'iso'、'locale'、'timestamp'、'yyyy-mm-dd'、'custom'",
+                "type": "string"
+              },
+              "custom_format": {
+                "description": "自定义格式字符串（当 format 为 'custom' 时使用）",
+                "type": "string"
+              }
+            },
+            "required": [
+              "datetime"
+            ],
+            "$schema": "http://json-schema.org/draft-07/schema#"
+          }
+        },
+        {
+          "name": "add_time",
+          "description": "在给定的日期时间基础上增加或减少时间",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "datetime": {
+                "type": "string",
+                "description": "基准日期时间字符串或时间戳"
+              },
+              "amount": {
+                "type": "number",
+                "description": "要增加（正数）或减少（负数）的数量"
+              },
+              "unit": {
+                "type": "string",
+                "description": "时间单位：'milliseconds'、'seconds'、'minutes'、'hours'、'days'、'weeks'、'months'、'years'"
+              }
+            },
+            "required": [
+              "datetime",
+              "amount",
+              "unit"
+            ],
+            "$schema": "http://json-schema.org/draft-07/schema#"
+          }
+        }
+      ],
+      "lastUpdated": "2026-06-14 01:25:40",
+      "serverConfig": {
+        "type": "stdio",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@xiaozhi-client/datetime-mcp"
+        ]
+      },
+      "configHash": "a874cdf751ad9f9e3ceb183ca8ed48c3e123c5f14596e7429c1ef6112ba10bf7",
+      "version": "1.0.0"
+    },
+    "knowledge": {
+      "tools": [
+        {
+          "name": "save_knowledge",
+          "description": "保存一条知识到本地知识库。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "search_knowledge",
+          "description": "在本地 JSON 知识库中按关键词搜索。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "keywords": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "keywords"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "list_all_knowledge",
+          "description": "列出本地 JSON 知识库中所有知识标题。\n\n约束：这是最终回复型工具。\n当用户询问“有多少”或“有哪些”时，直接给出数量和标题列表，不要追加“需要我展开哪一条吗”之类的追问。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "search_regulation",
+          "description": "严格检索铁路法规、规程、规则、标准和正式管理文件。\n\n使用要求：涉及铁路施工、安全、技术标准、作业限制、设备维修、营业线管理等问题时，必须先调用本工具。\n回答要求：只能依据本工具返回的原文摘录回答；必须引用来源文件和页码/条目；未检索到可靠依据时必须明确说“未检索到可靠依据”，不得凭经验补充。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "railway_safety_workflow",
+          "description": "内部铁路施工安全流程状态机。\n\n当用户提到 K100+350 / K100加350、信号机更换、施工计划、安全风险防控点、确认下发、电子围栏时调用。\n不要向用户暴露工具名；只把 result 字段作为小五自然回复。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "lastUpdated": "2026-06-21 21:36:37",
+      "serverConfig": {
+        "type": "sse",
+        "url": "http://127.0.0.1:8766/sse"
+      },
+      "configHash": "3691da5e5a9b15829ebe7b3ca9c6a411e00a3dc40df692174505859d29f1b706",
+      "version": "1.0.0"
+    }
+  },
+  "metadata": {
+    "lastGlobalUpdate": "2026-06-21 21:36:37",
+    "totalWrites": 374,
+    "createdAt": "2026-06-14 01:25:40"
+  }
+}

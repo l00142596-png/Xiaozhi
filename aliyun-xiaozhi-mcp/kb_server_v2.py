@@ -1,10 +1,11 @@
-﻿"""Xiaozhi Knowledge Base MCP Server v2.
+"""Xiaozhi Knowledge Base MCP Server v2.
 
 Tools:
   save_knowledge(title, content)     - Save one JSON knowledge item
   search_knowledge(keywords)         - Keyword search JSON knowledge
   list_all_knowledge()               - List JSON knowledge titles
   search_regulation(query)           - Strict citation RAG search for railway rules
+  railway_safety_workflow(text)      - Deterministic K100+350 safety workflow
 """
 
 import json
@@ -419,14 +420,25 @@ def search_knowledge(keywords: str) -> str:
 
 @mcp.tool()
 def list_all_knowledge() -> str:
-    """列出本地 JSON 知识库中所有知识标题。"""
+    """列出本地 JSON 知识库中所有知识标题。
+
+    约束：这是最终回复型工具。
+    当用户询问“有多少”或“有哪些”时，直接给出数量和标题列表，不要追加“需要我展开哪一条吗”之类的追问。
+    """
     logger.info("list_all_knowledge called")
     data = _load_kb()
     if not data:
-        return json.dumps({"result": "知识库目前为空"}, ensure_ascii=False)
+        return json.dumps({
+            "result": "知识库目前为空。请直接告知用户当前没有可列出的知识，不要追问。"
+        }, ensure_ascii=False)
     titles = "\n".join(f"{i}. {t}" for i, t in enumerate(data.keys(), 1))
-    return json.dumps({"result": f"知识库共有 {len(data)} 条知识：\n{titles}"}, ensure_ascii=False)
-
+    return json.dumps({
+        "result": (
+            f"知识库共有 {len(data)} 条知识，标题如下：\n"
+            f"{titles}\n"
+            "请直接把以上信息告诉用户，不要追问需要展开哪一条。"
+        )
+    }, ensure_ascii=False)
 
 @mcp.tool()
 def search_regulation(query: str) -> str:
@@ -521,7 +533,147 @@ def search_regulation(query: str) -> str:
     }, ensure_ascii=False)
 
 
+WORKFLOW_STATE_FILE = BASE_DIR / "railway_safety_workflow_state.json"
+WORKFLOW_AUDIT_FILE = Path("/var/log/railway_safety_workflow.log")
+
+
+def _workflow_load_state() -> dict:
+    if WORKFLOW_STATE_FILE.exists():
+        try:
+            return json.loads(WORKFLOW_STATE_FILE.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning("workflow state load failed: %s", e)
+    return {"state": "idle", "scenario": "", "updated_at": ""}
+
+
+def _workflow_save_state(state: dict) -> None:
+    import time
+    state["updated_at"] = time.strftime("%F %T")
+    WORKFLOW_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _workflow_audit(user_text: str, old_state: str, new_state: str, result: str) -> None:
+    import time
+    try:
+        item = {
+            "time": time.strftime("%F %T"),
+            "user_text": user_text,
+            "old_state": old_state,
+            "new_state": new_state,
+            "result": result,
+        }
+        with WORKFLOW_AUDIT_FILE.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    except Exception as e:
+        logger.warning("workflow audit write failed: %s", e)
+
+
+def _workflow_norm(text: str) -> str:
+    return re.sub(r"\s+", "", text).lower().replace("＋", "+").replace("加", "+")
+
+
+def _workflow_is_trigger(text: str) -> bool:
+    q = _workflow_norm(text)
+    has_location = "k100+350" in q or "k100+350" in q
+    has_signal = "信号机" in q and "更换" in q
+    has_plan = "施工计划" in q or "施工" in q
+    has_analysis = "分析" in q or "风险" in q or "防控" in q
+    short_alias = has_location and has_signal and has_plan
+    full_alias = has_location and has_signal and has_analysis and has_plan
+    return (short_alias or full_alias) and not _workflow_is_confirm(text) and not _workflow_is_fence_request(text)
+
+
+
+def _workflow_is_confirm(text: str) -> bool:
+    q = _workflow_norm(text)
+    return q in {"确认下发", "确认", "下发", "同意下发", "确定下发"} or ("确认" in q and "下发" in q)
+
+
+def _workflow_is_fence_request(text: str) -> bool:
+    q = _workflow_norm(text)
+    return "电子围栏" in q and ("生成" in q or "调度命令" in q)
+
+
+def _workflow_response_risk_analysis() -> str:
+    return (
+        "正在分析~~本施工计划安全风险点共有5处：\n"
+        "1.根据列车运行计划今日2时30分1936次列车遵义站通过，计划于2时35分通过k100+350信号机更换作业施工工点，请做好施工防护工作，确保列车运行安全。\n"
+        "2.1936次列车在k100+350处限速30公里/小时通过。\n"
+        "3.施工前确认施工驻站联络员就位，并调试通信设备。\n"
+        "4.施工负责人和安全员严格按照调度命令、施工计划进行施工作业，及时联系驻站联络员。\n"
+        "安全风险防控点已整理完成，是否需要下发列车司机、施工安全员？"
+    )
+
+
+def _workflow_result(result: str, state: str, done: bool = False, matched: bool = True) -> str:
+    return json.dumps({
+        "mode": "deterministic_workflow",
+        "matched": matched,
+        "state": state,
+        "done": done,
+        "result": result,
+        "answer_policy": "只输出 result 字段给用户；不要暴露工具名、状态机或内部调用过程。",
+    }, ensure_ascii=False)
+
+
+@mcp.tool()
+def railway_safety_workflow(text: str) -> str:
+    """内部铁路施工安全流程状态机。
+
+当用户提到 K100+350 / K100加350、信号机更换、施工计划、安全风险防控点、确认下发、电子围栏时调用。
+不要向用户暴露工具名；只把 result 字段作为小五自然回复。
+"""
+    logger.info("railway_safety_workflow: text=%s", text)
+    state_obj = _workflow_load_state()
+    old_state = state_obj.get("state", "idle")
+    new_state = old_state
+
+    if any(x in text for x in ["取消流程", "重置流程", "退出流程"]):
+        new_state = "idle"
+        result = "已退出K100+350信号机更换施工安全流程。"
+        state_obj = {"state": new_state, "scenario": ""}
+        _workflow_save_state(state_obj)
+        _workflow_audit(text, old_state, new_state, result)
+        return _workflow_result(result, new_state, done=True)
+    if _workflow_is_trigger(text):
+        new_state = "risk_analysis_done"
+        result = _workflow_response_risk_analysis()
+        state_obj = {"state": new_state, "scenario": "k100+350_signal_replacement"}
+        _workflow_save_state(state_obj)
+        _workflow_audit(text, old_state, new_state, result)
+        return _workflow_result(result, new_state)
+
+    if _workflow_is_confirm(text) and old_state == "risk_analysis_done":
+        new_state = "risk_notice_sent"
+        result = "已发至列车司机、现场施工安全员。"
+        state_obj["state"] = new_state
+        _workflow_save_state(state_obj)
+        _workflow_audit(text, old_state, new_state, result)
+        return _workflow_result(result, new_state)
+
+    if _workflow_is_fence_request(text) and old_state in {"risk_notice_sent", "risk_analysis_done"}:
+        new_state = "fence_generated"
+        result = "电子围栏已生成，时间：2:45-4:00,空间：k100+100——k100+500区段，是否下发施工安全员随身设备？"
+        state_obj["state"] = new_state
+        _workflow_save_state(state_obj)
+        _workflow_audit(text, old_state, new_state, result)
+        return _workflow_result(result, new_state)
+
+
+    if _workflow_is_confirm(text) and old_state == "fence_generated":
+        new_state = "fence_sent"
+        result = "已下发施工安全员随身设备。K100+350信号机更换施工安全风险防控和电子围栏下发流程已完成。"
+        state_obj = {"state": "idle", "scenario": ""}
+        _workflow_save_state(state_obj)
+        _workflow_audit(text, old_state, new_state, result)
+        return _workflow_result(result, new_state, done=True)
+
+    result = "未命中K100+350信号机更换施工安全流程。请说：请根据K100+350信号机更换施工计划分析安全风险防控点。"
+    _workflow_audit(text, old_state, old_state, result)
+    return _workflow_result(result, old_state, matched=False)
+
+
 if __name__ == "__main__":
     _load_rag()
-    logger.info("Starting KB Server v2 on %s:%d (4 tools, rag=%s)", HOST, PORT, RAG_DIR)
+    logger.info("Starting KB Server v2 on %s:%d (5 tools, rag=%s)", HOST, PORT, RAG_DIR)
     mcp.run(transport="sse", host=HOST, port=PORT)
