@@ -1,0 +1,17 @@
+[Unit]
+Description=Xiaozhi MCP Client Bridge
+After=network-online.target xiaozhi-kb.service
+Wants=network-online.target xiaozhi-kb.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/xiaozhi-mcp
+ExecStartPre=/usr/local/bin/wait_for_kb.sh
+ExecStart=/usr/bin/xiaozhi start
+Restart=always
+RestartSec=8
+StandardOutput=append:/var/log/xiaozhi_client.log
+StandardError=append:/var/log/xiaozhi_client.log
+
+[Install]
+WantedBy=multi-user.target
